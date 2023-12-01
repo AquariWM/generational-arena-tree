@@ -595,6 +595,112 @@ where
 		self.first_child.is_none()
 	}
 
+	fn detach_front(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as Node>::Token>
+	where
+		Self: Sized,
+	{
+		let this = token_to_node!(ref mut, Self: token, arena);
+
+		match (this.first_child, this.last_child) {
+			// Just a single child.
+			(Some(first), Some(last)) if first == last => {
+				(this.first_child, this.last_child) = (None, None);
+
+				let node = &mut arena.0[first.idx()];
+
+				// Detach the node's parent and siblings.
+				node.set_parent(None);
+
+				node.set_prev(None);
+				node.set_next(None);
+
+				Some(first)
+			},
+
+			// Multiple children.
+			(Some(first), Some(_)) => {
+				let next = first.next(arena).expect("There are multiple children.");
+
+				let this = token_to_node!(ref mut, Self: token, arena);
+
+				// Move the `next` node to the front.
+				this.first_child = Some(next);
+				arena.0[next.idx()].set_prev(None);
+
+				let node = &mut arena.0[first.idx()];
+
+				// Detach the node's parent and siblings.
+				node.set_parent(None);
+
+				node.set_prev(None);
+				node.set_next(None);
+
+				Some(first)
+			},
+
+			// No children.
+			(..) => {
+				// If either the first child or last child is `None`, both must be `None`.
+				debug_assert!(this.first_child.is_none() && this.last_child.is_none());
+
+				None
+			},
+		}
+	}
+
+	fn detach_back(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as Node>::Token>
+	where
+		Self: Sized,
+	{
+		let this = token_to_node!(ref mut, Self: token, arena);
+
+		match (this.first_child, this.last_child) {
+			// Just a single child.
+			(Some(first), Some(last)) if first == last => {
+				(this.first_child, this.last_child) = (None, None);
+
+				let node = &mut arena.0[last.idx()];
+
+				// Detach the node's parent and siblings.
+				node.set_parent(None);
+
+				node.set_prev(None);
+				node.set_next(None);
+
+				Some(last)
+			},
+
+			// Multiple children.
+			(Some(_), Some(last)) => {
+				let prev = last.prev(arena).expect("There are multiple children.");
+
+				let this = token_to_node!(ref mut, Self: token, arena);
+
+				// Move the `prev` node to the back.
+				this.last_child = Some(prev);
+				arena.0[prev.idx()].set_next(None);
+
+				let node = &mut arena.0[last.idx()];
+
+				// Detach the node's parent and siblings.
+				node.set_parent(None);
+
+				node.set_prev(None);
+				node.set_next(None);
+
+				Some(last)
+			},
+
+			// No children.
+			(..) => {
+				// If either the first child or last child is `None`, both must be `None`.
+				debug_assert!(this.first_child.is_none() && this.last_child.is_none());
+
+				None
+			},
+		}
+	}
+
 	fn pop_front(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as BaseNode>::Representation>
 	where
 		Self: Sized,
