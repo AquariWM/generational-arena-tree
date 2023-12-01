@@ -1,0 +1,14 @@
+[package]
+name = "generational-arena-tree"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["vec_deque_children"]
+vec_deque_children = []
+
+[dependencies]
+generational-arena = "0.2.9"
+thiserror = "1.0.50"
