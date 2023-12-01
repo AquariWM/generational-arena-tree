@@ -1108,15 +1108,70 @@ where
 		}
 	}
 
-	/// Removes the child at the given `index`.
+	/// Detaches the child at the given `index`, returning its [token].
+	///
+	/// This function is useful if you want to move a [node] from one [parent] to another.
 	///
 	/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to avoid
-	/// having multiple mutable references into the arena at a time.
+	/// having multiple mutable references into the [arena] at a time.
 	///
 	/// # Panics
 	/// This method will panic if the given `index` is out of bounds.
 	///
+	/// # See also
+	/// The [first child] or [last child] may be detached with [`detach_front`] and [`detach_back`]
+	/// respectively.
+	///
+	/// If you want to remove a child and its descendents from the [arena] altogether, see
+	/// [`remove`], [`pop_front`], or [`pop_back`].
+	///
+	/// [`detach_front`]: Self::detach_front
+	/// [`detach_back`]: Self::detach_back
+	///
+	/// [`remove`]: Self::remove
+	/// [`pop_front`]: Self::pop_front
+	/// [`pop_back`]: Self::pop_back
+	///
+	/// [token]: Node::Token
+	/// [node]: Node
+	/// [arena]: Arena
+	/// [parent]: Node::parent
+	/// [first child]: Self::first
+	/// [last child]: Self::last
+	fn detach(token: Self::Token, arena: &mut Arena<Self::Base>, index: usize) -> <Self::Base as Node>::Token
+	where
+		Self: Sized,
+		for<'base> &'base mut Self: TryFrom<&'base mut Self::Base>,
+		for<'base> <&'base mut Self as TryFrom<&'base mut Self::Base>>::Error: Debug;
+
+	/// Removes the child at the given `index`.
+	///
+	/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to avoid
+	/// having multiple mutable references into the [arena] at a time.
+	///
+	/// # Panics
+	/// This method will panic if the given `index` is out of bounds.
+	///
+	/// # See also
+	/// The [first child] or [last child] may be removed with [`pop_front`] and [`pop_back`]
+	/// respectively.
+	///
+	/// If you don't want to remove a child from the [arena], but merely make it a [root node] or
+	/// move it to another [parent], see [`detach`], [`detach_front`], or [`detach_back`].
+	///
+	/// [`pop_front`]: Self::pop_front
+	/// [`pop_back`]: Self::pop_back
+	///
+	/// [`detach`]: Self::detach
+	/// [`detach_front`]: Self::detach_front
+	/// [`detach_back`]: Self::detach_back
+	///
 	/// [token]: Self::Token
+	/// [arena]: Arena
+	/// [root node]: Self::root
+	/// [first child]: Self::first
+	/// [last child]: Self::last
+	/// [parent]: Node::parent
 	fn remove(
 		token: Self::Token,
 		arena: &mut Arena<Self::Base>,
