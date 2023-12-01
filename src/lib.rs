@@ -555,6 +555,110 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 	{
 		N::push_back(*self, arena, new);
 	}
+
+	/// Detaches the child at the given `index`, returning its token.
+	///
+	/// This function is useful if you want to move a [node] from one [parent] to another.
+	///
+	/// # Panics
+	/// This method will panic if the given `index` is out of bounds.
+	///
+	/// # See also
+	/// The [first child] or [last child] may be detached with [`detach_front`] and [`detach_back`]
+	/// respectively.
+	///
+	/// If you want to remove a child and its descendents from the [arena] altogether, see
+	/// [`remove`], [`pop_front`], or [`pop_back`].
+	///
+	/// [`detach_front`]: Self::detach_front
+	/// [`detach_back`]: Self::detach_back
+	///
+	/// [`remove`]: Self::remove
+	/// [`pop_front`]: Self::pop_front
+	/// [`pop_back`]: Self::pop_back
+	///
+	/// [node]: Node
+	/// [arena]: Arena
+	/// [parent]: Node::parent
+	/// [first child]: Self::first
+	/// [last child]: Self::last
+	#[inline]
+	fn detach(&self, arena: &mut Arena<N::Base>, index: usize) -> <N::Base as Node>::Token
+	where
+		N: BranchNodeDeque<Token = Self>,
+		for<'base> &'base mut N: TryFrom<&'base mut N::Base>,
+		for<'base> <&'base mut N as TryFrom<&'base mut N::Base>>::Error: Debug,
+	{
+		N::detach(*self, arena, index)
+	}
+
+	/// Removes the child at the given `index`.
+	///
+	/// # Panics
+	/// This method will panic if the given `index` is out of bounds.
+	///
+	/// # See also
+	/// The [first child] or [last child] may be removed with [`pop_front`] and [`pop_back`]
+	/// respectively.
+	///
+	/// If you don't want to remove a child from the [arena], but merely make it a [root node] or
+	/// move it to another [parent], see [`detach`], [`detach_front`], or [`detach_back`].
+	///
+	/// [`pop_front`]: Self::pop_front
+	/// [`pop_back`]: Self::pop_back
+	///
+	/// [`detach`]: Self::detach
+	/// [`detach_front`]: Self::detach_front
+	/// [`detach_back`]: Self::detach_back
+	///
+	/// [arena]: Arena
+	/// [root node]: Self::root
+	/// [first child]: Self::first
+	/// [last child]: Self::last
+	/// [parent]: Node::parent
+	#[inline]
+	fn remove(&self, arena: &mut Arena<N::Base>, index: usize) -> <N::Base as BaseNode>::Representation
+	where
+		N: BranchNodeDeque<Token = Self>,
+		for<'base> &'base mut N: TryFrom<&'base mut N::Base>,
+		for<'base> <&'base mut N as TryFrom<&'base mut N::Base>>::Error: Debug,
+	{
+		N::remove(*self, arena, index)
+	}
+
+	/// Inserts the given `new` token's [node] at the given `index`.
+	///
+	/// # Panics
+	/// This method will panic if:
+	/// - the given `index` is greater than the [`len()`]; or
+	/// - the given `new` [token] refers to either:
+	///   - this branch node's [root]; or
+	///   - a [node] that already has a [parent].
+	///
+	/// # See also
+	/// A child can also be pushed to the beginning or end of this [branch node]'s [children] with
+	/// [`push_front`] and [`push_back`] respectively.
+	///
+	/// [branch node]: BranchNodeDeque
+	/// [children]: Self::children
+	/// [`push_front`]: Self::push_front
+	/// [`push_back`]: Self::push_back
+	///
+	/// [node]: BaseNode
+	/// [token]: Self::Token
+	/// [root]: Self::root
+	/// [parent]: Node::parent
+	///
+	/// [`len()`]: Self::len
+	#[inline]
+	fn insert(&self, arena: &mut Arena<N::Base>, index: usize, new: <N::Base as Node>::Token)
+	where
+		N: BranchNodeDeque<Token = Self>,
+		for<'base> &'base mut N: TryFrom<&'base mut N::Base>,
+		for<'base> <&'base mut N as TryFrom<&'base mut N::Base>>::Error: Debug,
+	{
+		N::insert(*self, arena, index, new)
+	}
 }
 
 impl<N: Node> Token<N> {
@@ -1193,6 +1297,14 @@ where
 	/// - the given `new` [token] refers to either:
 	///   - this branch node's [root]; or
 	///   - a [node] that already has a [parent].
+	///
+	/// # See also
+	/// A child can also be pushed to the beginning or end of this branch node's [children] with
+	/// [`push_front`] and [`push_back`] respectively.
+	///
+	/// [children]: Self::children
+	/// [`push_front`]: Self::push_front
+	/// [`push_back`]: Self::push_back
 	///
 	/// [node]: BaseNode
 	/// [token]: Self::Token
