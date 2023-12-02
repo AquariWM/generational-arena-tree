@@ -5,6 +5,35 @@
 #![feature(doc_cfg)]
 #![warn(clippy::missing_const_for_fn)]
 
+//! Trees based on indexes to a generational arena.
+//!
+//! # Features
+//! - `default`
+//!   - `split`, `unified`, `deque`
+//! - `split`
+//!   - Enables
+#![cfg_attr(not(feature = "split"), doc = "     split")]
+#![cfg_attr(feature = "split", doc = "     [split]")]
+//!     nodes, where each [node] is split into
+#![cfg_attr(not(feature = "split"), doc = "     ['branches'](BranchNode),")]
+#![cfg_attr(feature = "split", doc = "     ['branches'](split::Branch),")]
+//!     which may have [children], and
+#![cfg_attr(not(feature = "split"), doc = "     'leaves',")]
+#![cfg_attr(feature = "split", doc = "     ['leaves'](split::Leaf),")]
+//!     which may not have [children].
+//! - `unified`
+//!   - Enables
+#![cfg_attr(not(feature = "unified"), doc = "     unified")]
+#![cfg_attr(feature = "unified", doc = "     [unified]")]
+//!     nodes, where every [node] may have [children].
+//! - `deque`
+//!   - Enables [nodes] which have [`VecDeque`] [children], rather than siblings forming a [linked]
+//!     list, allowing operations by index.
+//!
+//! [node]: Node
+//! [nodes]: Node
+//! [children]: BranchNode::children
+
 pub mod iter;
 
 #[cfg(feature = "split")]
@@ -1122,7 +1151,7 @@ pub trait BranchNode: Node {
 		Self: Sized,
 		for<'base> &'base Self: TryFrom<&'base Self::Base>,
 	{
-		iter::Descendants::new(&self, arena)
+		iter::Descendants::new(self, arena)
 	}
 
 	/// Returns whether this branch node has no children.
