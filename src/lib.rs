@@ -6,8 +6,9 @@
 #![warn(clippy::missing_const_for_fn)]
 
 pub mod iter;
-pub mod typed;
-pub mod untyped;
+
+pub mod split;
+pub mod unified;
 
 macro_rules! token_to_node {
     ($(ref $($mut:ident)?,)? $N:ty: $token:expr, $arena:expr) => {
@@ -119,7 +120,7 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 	/// [`RootToken::Ancestor`] is returned with the root node's token.
 	///
 	/// Internally, this method iterates over the [node]'s [ancestors] to find the last one, so it
-	/// is `O(n)`.
+	/// is `O(n)` best, average, and worst case.
 	///
 	/// [node]: Node
 	/// [ancestor]: Self::ancestors
@@ -768,7 +769,7 @@ pub trait Node: Debug + Sealed {
 	/// [`RootToken::Ancestor`] is returned with the root node's token.
 	///
 	/// Internally, this method iterates over the node's [ancestors] to find the last one, so it is
-	/// `O(n)`.
+	/// `O(n)` best, average, and worst case.
 	///
 	/// [ancestor]: Self::ancestors
 	/// [parent]: Self::parent

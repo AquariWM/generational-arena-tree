@@ -26,63 +26,161 @@ use crate::{
 type BranchToken<BranchData, LeafData> = Token<Branch<BranchData, LeafData>>;
 type LeafToken<BranchData, LeafData> = Token<Leaf<BranchData, LeafData>>;
 
+/// A [node] that is split into separate [branch] and [leaf] nodes.
+///
+/// [`BranchData`] represents the [custom data](Branch::Data) associated with [branches], while
+/// [`LeafData`] represents the [custom data](Leaf::Data) associated with [leaves].
+///
+/// For a [node] that _isn't_ split into separate branch and leaf nodes, see [`UnifiedNode`].
+///
+/// [`UnifiedNode`]: crate::unified::UnifiedNode
+///
+/// [node]: Node
+/// [branch]: Branch
+/// [branches]: Branch
+/// [leaf]: Leaf
+/// [leaves]: Leaf
 #[derive(Debug)]
-pub enum TypedNode<BranchData: Debug, LeafData: Debug> {
+pub enum SplitNode<BranchData: Debug, LeafData: Debug> {
+	/// A [branch] node that may have children.
+	///
+	/// [branch]: Branch
 	Branch(Branch<BranchData, LeafData>),
+	/// A [leaf] node that may not have children.
+	///
+	/// [leaf]: Leaf
 	Leaf(Leaf<BranchData, LeafData>),
 }
 
+/// The [custom data] associated with a [split node].
+///
+/// [custom data]: Node::Data
+/// [split node]: SplitNode
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub enum TypedData<BranchData: Debug, LeafData: Debug> {
+pub enum SplitData<BranchData: Debug, LeafData: Debug> {
+	/// The [data] associated with a [branch] node.
+	///
+	/// [data]: Branch::Data
+	/// [branch]: Branch
 	Branch(BranchData),
+	/// The [data] associated with a [leaf] node.
+	///
+	/// [data]: Leaf::Data
+	/// [leaf]: Leaf
 	Leaf(LeafData),
 }
 
+/// The [representation] of a [split node] after it has been removed from the [arena].
+///
+/// [representation]: BaseNode::Representation
+/// [split node]: SplitNode
+/// [arena]: Arena
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub enum TypedNodeRepresentation<BranchData: Debug, LeafData: Debug> {
+pub enum SplitNodeRepresentation<BranchData: Debug, LeafData: Debug> {
+	/// The [representation] of a [branch] node.
+	///
+	/// [representation]: BaseNode::Representation
+	/// [branch]: Branch
 	Branch {
-		children: VecDeque<TypedNodeRepresentation<BranchData, LeafData>>,
+		/// The [branch] node's [children].
+		///
+		/// [branch]: Branch
+		/// [children]: Branch::children
+		children: VecDeque<SplitNodeRepresentation<BranchData, LeafData>>,
+		/// The [data] associated with the [branch] node.
+		///
+		/// [branch]: Branch
+		/// [data]: Branch::Data
 		data: BranchData,
 	},
-
+	/// The [representation] of a [leaf] node.
+	///
+	/// [representation]: BaseNode::Representation
+	/// [leaf]: Leaf
 	Leaf {
+		/// The [data] associated with the [leaf] node.
+		///
+		/// [leaf]: Leaf
+		/// [data]: Leaf::Data
 		data: LeafData,
 	},
 }
 
-pub enum TypedToken<BranchData: Debug, LeafData: Debug> {
+/// The [token] type referring to a [split node].
+///
+/// [token]: NodeToken
+/// [split node]: SplitNode
+pub enum SplitToken<BranchData: Debug, LeafData: Debug> {
+	/// A [branch] node's [token].
+	///
+	/// [branch]: Branch
+	/// [token]: NodeToken
 	Branch(BranchToken<BranchData, LeafData>),
+	/// A [leaf] node's [token].
+	///
+	/// [leaf]: Leaf
+	/// [token]: NodeToken
 	Leaf(LeafToken<BranchData, LeafData>),
 }
 
+/// The [node] representing [branches] in a [split node] tree.
+///
+/// [Branches] are [nodes] which may have [children], as opposed to [leaves], which may not have
+/// [children].
+///
+/// [`BranchData`] represents the [custom data] associated with branch nodes.
+///
+/// [custom data]: Branch::Data
+///
+/// [node]: Node
+/// [nodes]: Node
+/// [Branches]: BranchNode
+/// [branches]: BranchNode
+/// [leaves]: Leaf
+/// [children]: Branch::children
+/// [split node]: SplitNode
 #[derive(Debug)]
 pub struct Branch<BranchData: Debug, LeafData: Debug> {
 	token: Token<Self>,
 
 	parent: Option<BranchToken<BranchData, LeafData>>,
 
-	prev: Option<TypedToken<BranchData, LeafData>>,
-	next: Option<TypedToken<BranchData, LeafData>>,
+	prev: Option<SplitToken<BranchData, LeafData>>,
+	next: Option<SplitToken<BranchData, LeafData>>,
 
-	first_child: Option<TypedToken<BranchData, LeafData>>,
-	last_child: Option<TypedToken<BranchData, LeafData>>,
+	first_child: Option<SplitToken<BranchData, LeafData>>,
+	last_child: Option<SplitToken<BranchData, LeafData>>,
 
 	data: BranchData,
 }
 
+/// The [node] representing leaves in a [split node] tree.
+///
+/// Leaves are [nodes] which may not have [children], as opposed to [branches], which may have
+/// [children].
+///
+/// [`LeafData`] represents the [custom data] associated with leaf nodes.
+///
+/// [custom data]: Leaf::Data
+///
+/// [node]: Node
+/// [nodes]: Node
+/// [children]: Branch::children
+/// [branches]: Branch
+/// [split node]: SplitNode
 #[derive(Debug)]
 pub struct Leaf<BranchData: Debug, LeafData: Debug> {
 	token: Token<Self>,
 
 	parent: Option<BranchToken<BranchData, LeafData>>,
 
-	prev: Option<TypedToken<BranchData, LeafData>>,
-	next: Option<TypedToken<BranchData, LeafData>>,
+	prev: Option<SplitToken<BranchData, LeafData>>,
+	next: Option<SplitToken<BranchData, LeafData>>,
 
 	data: LeafData,
 }
 
-impl<BranchData, LeafData> Debug for TypedToken<BranchData, LeafData>
+impl<BranchData, LeafData> Debug for SplitToken<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
@@ -96,7 +194,7 @@ where
 	}
 }
 
-impl<BranchData, LeafData, I: Idx> PartialEq<I> for TypedToken<BranchData, LeafData>
+impl<BranchData, LeafData, I: Idx> PartialEq<I> for SplitToken<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
@@ -107,14 +205,14 @@ where
 	}
 }
 
-impl<BranchData, LeafData> Eq for TypedToken<BranchData, LeafData>
+impl<BranchData, LeafData> Eq for SplitToken<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
 {
 }
 
-impl<BranchData, LeafData> Hash for TypedToken<BranchData, LeafData>
+impl<BranchData, LeafData> Hash for SplitToken<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
@@ -128,7 +226,7 @@ where
 	}
 }
 
-impl<BranchData, LeafData> Clone for TypedToken<BranchData, LeafData>
+impl<BranchData, LeafData> Clone for SplitToken<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
@@ -138,19 +236,19 @@ where
 	}
 }
 
-impl<BranchData, LeafData> Copy for TypedToken<BranchData, LeafData>
+impl<BranchData, LeafData> Copy for SplitToken<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
 {
 }
 
-impl<BranchData, LeafData> TypedToken<BranchData, LeafData>
+impl<BranchData, LeafData> SplitToken<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
 {
-	/// Creates a new `TypedToken` for a [branch] from the given `token`.
+	/// Creates a new `SplitToken` for a [branch] from the given `token`.
 	///
 	/// [branch]: Branch
 	#[inline(always)]
@@ -158,7 +256,7 @@ where
 		Self::Branch(token)
 	}
 
-	/// Creates a new `TypedToken` for a [leaf] from the given `token`.
+	/// Creates a new `SplitToken` for a [leaf] from the given `token`.
 	///
 	/// [leaf]: Leaf
 	#[inline(always)]
@@ -167,7 +265,7 @@ where
 	}
 }
 
-impl<BranchData, LeafData> Idx for TypedToken<BranchData, LeafData>
+impl<BranchData, LeafData> Idx for SplitToken<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
@@ -181,7 +279,7 @@ where
 	}
 }
 
-impl<BranchData, LeafData> NodeToken<TypedNode<BranchData, LeafData>> for TypedToken<BranchData, LeafData>
+impl<BranchData, LeafData> NodeToken<SplitNode<BranchData, LeafData>> for SplitToken<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
@@ -246,74 +344,74 @@ where
 	}
 }
 
-impl<'node, BranchData, LeafData> TryFrom<&'node TypedNode<BranchData, LeafData>>
+impl<'node, BranchData, LeafData> TryFrom<&'node SplitNode<BranchData, LeafData>>
 	for &'node Branch<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
 {
-	type Error = &'node TypedNode<BranchData, LeafData>;
+	type Error = &'node SplitNode<BranchData, LeafData>;
 
 	#[inline(always)]
-	fn try_from(node: &'node TypedNode<BranchData, LeafData>) -> Result<Self, Self::Error> {
+	fn try_from(node: &'node SplitNode<BranchData, LeafData>) -> Result<Self, Self::Error> {
 		match node {
-			TypedNode::Branch(branch) => Ok(branch),
-			TypedNode::Leaf(_) => Err(node),
+			SplitNode::Branch(branch) => Ok(branch),
+			SplitNode::Leaf(_) => Err(node),
 		}
 	}
 }
 
-impl<'node, BranchData, LeafData> TryFrom<&'node mut TypedNode<BranchData, LeafData>>
+impl<'node, BranchData, LeafData> TryFrom<&'node mut SplitNode<BranchData, LeafData>>
 	for &'node mut Branch<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
 {
-	type Error = &'node mut TypedNode<BranchData, LeafData>;
+	type Error = &'node mut SplitNode<BranchData, LeafData>;
 
 	#[inline(always)]
-	fn try_from(node: &'node mut TypedNode<BranchData, LeafData>) -> Result<Self, Self::Error> {
+	fn try_from(node: &'node mut SplitNode<BranchData, LeafData>) -> Result<Self, Self::Error> {
 		match node {
-			TypedNode::Branch(branch) => Ok(branch),
-			TypedNode::Leaf(_) => Err(node),
+			SplitNode::Branch(branch) => Ok(branch),
+			SplitNode::Leaf(_) => Err(node),
 		}
 	}
 }
 
-impl<'node, BranchData, LeafData> TryFrom<&'node TypedNode<BranchData, LeafData>> for &'node Leaf<BranchData, LeafData>
+impl<'node, BranchData, LeafData> TryFrom<&'node SplitNode<BranchData, LeafData>> for &'node Leaf<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
 {
-	type Error = &'node TypedNode<BranchData, LeafData>;
+	type Error = &'node SplitNode<BranchData, LeafData>;
 
 	#[inline(always)]
-	fn try_from(node: &'node TypedNode<BranchData, LeafData>) -> Result<Self, Self::Error> {
+	fn try_from(node: &'node SplitNode<BranchData, LeafData>) -> Result<Self, Self::Error> {
 		match node {
-			TypedNode::Branch(_) => Err(node),
-			TypedNode::Leaf(leaf) => Ok(leaf),
+			SplitNode::Branch(_) => Err(node),
+			SplitNode::Leaf(leaf) => Ok(leaf),
 		}
 	}
 }
 
-impl<'node, BranchData, LeafData> TryFrom<&'node mut TypedNode<BranchData, LeafData>>
+impl<'node, BranchData, LeafData> TryFrom<&'node mut SplitNode<BranchData, LeafData>>
 	for &'node mut Leaf<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
 {
-	type Error = &'node mut TypedNode<BranchData, LeafData>;
+	type Error = &'node mut SplitNode<BranchData, LeafData>;
 
 	#[inline(always)]
-	fn try_from(node: &'node mut TypedNode<BranchData, LeafData>) -> Result<Self, Self::Error> {
+	fn try_from(node: &'node mut SplitNode<BranchData, LeafData>) -> Result<Self, Self::Error> {
 		match node {
-			TypedNode::Branch(_) => Err(node),
-			TypedNode::Leaf(leaf) => Ok(leaf),
+			SplitNode::Branch(_) => Err(node),
+			SplitNode::Leaf(leaf) => Ok(leaf),
 		}
 	}
 }
 
-impl<BranchData, LeafData> TypedNode<BranchData, LeafData>
+impl<BranchData, LeafData> SplitNode<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
@@ -327,7 +425,7 @@ where
 	}
 
 	#[inline(always)]
-	fn set_prev(&mut self, prev: Option<TypedToken<BranchData, LeafData>>) {
+	fn set_prev(&mut self, prev: Option<SplitToken<BranchData, LeafData>>) {
 		match self {
 			Self::Branch(branch) => branch.prev = prev,
 			Self::Leaf(leaf) => leaf.prev = prev,
@@ -335,7 +433,7 @@ where
 	}
 
 	#[inline(always)]
-	fn set_next(&mut self, next: Option<TypedToken<BranchData, LeafData>>) {
+	fn set_next(&mut self, next: Option<SplitToken<BranchData, LeafData>>) {
 		match self {
 			Self::Branch(branch) => branch.next = next,
 			Self::Leaf(leaf) => leaf.next = next,
@@ -343,26 +441,26 @@ where
 	}
 }
 
-impl<BranchData, LeafData> Sealed for TypedNode<BranchData, LeafData>
+impl<BranchData, LeafData> Sealed for SplitNode<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
 {
 }
 
-impl<BranchData, LeafData> Node for TypedNode<BranchData, LeafData>
+impl<BranchData, LeafData> Node for SplitNode<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
 {
 	type Base = Self;
-	type Token = TypedToken<BranchData, LeafData> where Self: Sized;
+	type Token = SplitToken<BranchData, LeafData> where Self: Sized;
 
-	type Data = TypedData<BranchData, LeafData>;
-	type DataRef<'data> = TypedData<&'data BranchData, &'data LeafData>
+	type Data = SplitData<BranchData, LeafData>;
+	type DataRef<'data> = SplitData<&'data BranchData, &'data LeafData>
 	where
 		Self: 'data;
-	type DataRefMut<'data> = TypedData<&'data mut BranchData, &'data mut LeafData>
+	type DataRefMut<'data> = SplitData<&'data mut BranchData, &'data mut LeafData>
 	where
 		Self: 'data;
 
@@ -372,8 +470,8 @@ where
 		Self: Sized,
 	{
 		match data {
-			TypedData::Branch(data) => TypedToken::Branch(Branch::new(arena, data)),
-			TypedData::Leaf(data) => TypedToken::Leaf(Leaf::new(arena, data)),
+			SplitData::Branch(data) => SplitToken::Branch(Branch::new(arena, data)),
+			SplitData::Leaf(data) => SplitToken::Leaf(Leaf::new(arena, data)),
 		}
 	}
 
@@ -383,8 +481,8 @@ where
 		Self: Sized,
 	{
 		match self {
-			Self::Branch(branch) => TypedToken::Branch(branch.token()),
-			Self::Leaf(leaf) => TypedToken::Leaf(leaf.token()),
+			Self::Branch(branch) => SplitToken::Branch(branch.token()),
+			Self::Leaf(leaf) => SplitToken::Leaf(leaf.token()),
 		}
 	}
 
@@ -399,26 +497,26 @@ where
 	#[inline(always)]
 	fn data(&self) -> Self::DataRef<'_> {
 		match self {
-			Self::Branch(branch) => TypedData::Branch(branch.data()),
-			Self::Leaf(leaf) => TypedData::Leaf(leaf.data()),
+			Self::Branch(branch) => SplitData::Branch(branch.data()),
+			Self::Leaf(leaf) => SplitData::Leaf(leaf.data()),
 		}
 	}
 
 	#[inline(always)]
 	fn data_mut(&mut self) -> Self::DataRefMut<'_> {
 		match self {
-			Self::Branch(branch) => TypedData::Branch(branch.data_mut()),
-			Self::Leaf(leaf) => TypedData::Leaf(leaf.data_mut()),
+			Self::Branch(branch) => SplitData::Branch(branch.data_mut()),
+			Self::Leaf(leaf) => SplitData::Leaf(leaf.data_mut()),
 		}
 	}
 }
 
-impl<BranchData, LeafData> BaseNode for TypedNode<BranchData, LeafData>
+impl<BranchData, LeafData> BaseNode for SplitNode<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
 {
-	type Representation = TypedNodeRepresentation<BranchData, LeafData>;
+	type Representation = SplitNodeRepresentation<BranchData, LeafData>;
 
 	type Branch = Branch<BranchData, LeafData>;
 	type Leaf = Leaf<BranchData, LeafData>;
@@ -438,26 +536,26 @@ where
 						arena
 							.0
 							.remove(token.idx())
-							.expect("tried to remove child but there was no such node in the `arena`, child: {token:?}")
+							.expect("tried to remove child but there was no such node in the `arena`")
 							.into_representation(arena),
 					);
 
 					child = Some(*token);
 				}
 
-				TypedNodeRepresentation::Branch {
+				SplitNodeRepresentation::Branch {
 					children,
 					data: branch.data,
 				}
 			},
 
 			// Leaf.
-			Self::Leaf(leaf) => TypedNodeRepresentation::Leaf { data: leaf.data },
+			Self::Leaf(leaf) => SplitNodeRepresentation::Leaf { data: leaf.data },
 		}
 	}
 }
 
-impl<BranchData, LeafData> LinkedNode for TypedNode<BranchData, LeafData>
+impl<BranchData, LeafData> LinkedNode for SplitNode<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
@@ -491,7 +589,7 @@ where
 	BranchData: Debug,
 	LeafData: Debug,
 {
-	type Base = TypedNode<BranchData, LeafData>;
+	type Base = SplitNode<BranchData, LeafData>;
 	type Token = Token<Self>
 	where
 		Self: Sized;
@@ -509,7 +607,7 @@ where
 		Self: Sized,
 	{
 		Token::new(arena.0.insert_with(|idx| {
-			TypedNode::Branch(Self {
+			SplitNode::Branch(Self {
 				token: Token::new(idx),
 
 				parent: None,
@@ -803,22 +901,20 @@ where
 	where
 		Self: Sized,
 	{
-		let this = token_to_node!(ref, Self: token, arena);
-
 		// We're not pushing our own root...
 		assert_ne!(
-			this.root(arena),
+			token_to_node!(ref, Self: token, arena).root(arena),
 			new,
 			"tried to push this branch's root node as a child"
 		);
 		// And we're not pushing a child that already has a parent...
 		assert!(
-			arena.0[token.idx()].parent().is_none(),
+			arena.0[new.idx()].parent().is_none(),
 			"tried to push a child that already has a parent"
 		);
 
 		// Set the child's parent.
-		arena.0[token.idx()].set_parent(Some(token));
+		arena.0[new.idx()].set_parent(Some(token));
 
 		let this = token_to_node!(ref mut, Self: token, arena);
 
@@ -845,22 +941,20 @@ where
 	where
 		Self: Sized,
 	{
-		let this = token_to_node!(ref, Self: token, arena);
-
 		// We're not pushing our own root...
 		assert_ne!(
-			this.root(arena),
+			token_to_node!(ref, Self: token, arena).root(arena),
 			new,
 			"tried to push this branch's root node as a child"
 		);
 		// And we're not pushing a child that already has a parent...
 		assert!(
-			arena.0[token.idx()].parent().is_none(),
+			arena.0[new.idx()].parent().is_none(),
 			"tried to push a child that already has a parent"
 		);
 
 		// Set the child's parent.
-		arena.0[token.idx()].set_parent(Some(token));
+		arena.0[new.idx()].set_parent(Some(token));
 
 		let this = token_to_node!(ref mut, Self: token, arena);
 
@@ -896,7 +990,7 @@ where
 	BranchData: Debug,
 	LeafData: Debug,
 {
-	type Base = TypedNode<BranchData, LeafData>;
+	type Base = SplitNode<BranchData, LeafData>;
 	type Token = Token<Self> where Self: Sized;
 
 	type Data = LeafData;
@@ -912,7 +1006,7 @@ where
 		Self: Sized,
 	{
 		Token::new(arena.0.insert_with(|idx| {
-			TypedNode::Leaf(Self {
+			SplitNode::Leaf(Self {
 				token: Token::new(idx),
 
 				parent: None,
