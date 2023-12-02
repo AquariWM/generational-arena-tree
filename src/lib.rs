@@ -478,7 +478,7 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 	/// move it to another [parent], see [`detach_front`], [`detach_back`], or, if this is a
 	/// [`BranchNodeDeque`], [`detach`].
 	///
-	/// [`pop_back`]: Self::pop_back
+	/// [`pop_front`]: Self::pop_front
 	/// [`remove`]: Self::remove
 	///
 	/// [`detach_front`]: Self::detach_front
@@ -715,6 +715,7 @@ pub trait Node: Debug + Sealed {
 	///
 	/// This is the type returned by [`data_mut`].
 	///
+	/// [data]: Self::Data
 	/// [`data_mut`]: Self::data_mut
 	type DataRefMut<'data>
 	where
@@ -1108,7 +1109,7 @@ pub trait BranchNode: Node {
 	/// move it to another [parent], see [`detach_front`], [`detach_back`], or, if this is a
 	/// [`BranchNodeDeque`], [`detach`].
 	///
-	/// [`pop_back`]: Self::pop_back
+	/// [`pop_front`]: Self::pop_front
 	/// [`remove`]: BranchNodeDeque::remove
 	///
 	/// [`detach_front`]: Self::detach_front
