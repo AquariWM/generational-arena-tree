@@ -2,12 +2,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#![feature(arbitrary_self_types)]
+#![feature(doc_cfg)]
 #![warn(clippy::missing_const_for_fn)]
 
 pub mod iter;
 
+#[cfg(feature = "split")]
+#[doc(cfg(feature = "split"))]
 pub mod split;
+#[cfg(feature = "unified")]
+#[doc(cfg(feature = "unified"))]
 pub mod unified;
 
 macro_rules! token_to_node {
@@ -31,6 +35,8 @@ use std::{
 	marker::PhantomData,
 	ops::Index,
 };
+
+use cfg_attrs::cfg_attrs;
 
 pub struct Token<N: Node> {
 	idx: generational_arena::Index,
@@ -288,9 +294,11 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 		iter::Descendants::new(token_to_node!(ref, N: self, arena), arena)
 	}
 
+	#[cfg(feature = "deque")]
 	/// Returns the number of children this [branch node] has.
 	///
 	/// [branch node]: BranchNodeDeque
+	#[doc(cfg(feature = "deque"))]
 	#[inline]
 	fn len(&self, arena: &Arena<N::Base>) -> usize
 	where
@@ -314,6 +322,7 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 		token_to_node!(ref, N: self, arena).is_empty()
 	}
 
+	#[cfg(feature = "deque")]
 	/// Returns the token of the child at the given `index`.
 	///
 	/// # Panics
@@ -323,6 +332,7 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 	/// For a fallible version, see [`get`].
 	///
 	/// [`get`]: Self::get
+	#[doc(cfg(feature = "deque"))]
 	#[inline]
 	fn get_unchecked(&self, arena: &Arena<N::Base>, index: usize) -> <N::Base as Node>::Token
 	where
@@ -333,6 +343,7 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 		token_to_node!(ref, N: self, arena)[index]
 	}
 
+	#[cfg(feature = "deque")]
 	/// Returns the token of the child at the given `index`.
 	///
 	/// If `index` is out of bounds, [`None`] is returned.
@@ -341,6 +352,7 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 	/// For a version without bounds checks, see [`get_unchecked`].
 	///
 	/// [`get_unchecked`]: Self::get_unchecked
+	#[doc(cfg(feature = "deque"))]
 	#[inline]
 	fn get(&self, arena: &Arena<N::Base>, index: usize) -> Option<<N::Base as Node>::Token>
 	where
@@ -351,36 +363,50 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 		token_to_node!(ref, N: self, arena).get(index)
 	}
 
-	/// Detaches this branch node's [first child], returning its token.
-	///
-	/// If this branch node is [empty] then there is no child to detach, so [`None`] is returned.
-	/// Otherwise, the child is removed from this branch node's [children], but remains in the
-	/// [arena].
-	///
-	/// This function is useful if you want to move a [node] from one [parent] to another.
-	///
-	/// # See also
-	/// The [last child] may also be detached using [`detach_back`]. If this is a
-	/// [`BranchNodeDeque`], children may also be detached by index using [`detach`].
-	///
-	/// If you want to remove a child and its [descendants] from the [arena] altogether, see
-	/// [`pop_front`], [`pop_back`], or, if this is a [`BranchNodeDeque`], [`remove`].
-	///
-	/// [`detach_back`]: Self::detach_back
-	/// [`detach`]: Self::detach
-	///
-	/// [`pop_front`]: Self::pop_front
-	/// [`pop_back`]: Self::pop_back
-	/// [`remove`]: Self::remove
-	///
-	/// [first child]: Self::first
-	/// [last child]: Self::last
-	/// [empty]: Self::is_empty
-	/// [children]: Self::children
-	/// [descendants]: Self::descendants
-	/// [arena]: Arena
-	/// [node]: Node
-	/// [parent]: Node::parent
+	#[cfg_attrs {
+		/// Detaches this branch node's [first child], returning its token.
+		///
+		/// If this branch node is [empty] then there is no child to detach, so [`None`] is
+		/// returned. Otherwise, the child is removed from this branch node's [children], but
+		/// remains in the [arena].
+		///
+		/// This function is useful if you want to move a [node] from one [parent] to another.
+		///
+		/// # See also
+		/// The [last child] may also be detached using [`detach_back`].
+		#[configure(
+			feature = "deque",
+			/// If this is a [`BranchNodeDeque`], children may also be detached by index using
+			/// [`detach`].
+			///
+			/// [`detach`]: BranchNodeDeque::detach
+		)]
+		///
+		/// If you want to remove a child and its descendants from the [arena] altogether, see
+		#[configure(
+			feature = "deque",
+			/// [`pop_front`], [`pop_back`], or, if this is a [`BranchNodeDeque`], [`remove`].
+			///
+			/// [`remove`]: BranchNodeDeque::remove
+		)]
+		#[configure(
+			not(feature = "deque"),
+			/// [`pop_front`] and [`pop_back`].
+		)]
+		///
+		/// [`detach_back`]: Self::detach_back
+		///
+		/// [`pop_front`]: Self::pop_front
+		/// [`pop_back`]: Self::pop_back
+		///
+		/// [first child]: Self::first
+		/// [last child]: Self::last
+		/// [empty]: Self::is_empty
+		/// [children]: Self::children
+		/// [arena]: Arena
+		/// [node]: Node
+		/// [parent]: Node::parent
+	}]
 	#[inline]
 	fn detach_front(&self, arena: &mut Arena<N::Base>) -> Option<<N::Base as Node>::Token>
 	where
@@ -390,36 +416,51 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 	{
 		N::detach_front(*self, arena)
 	}
-	/// Detaches this branch node's [last child], returning its token.
-	///
-	/// If this branch node is [empty] then there is no child to detach, so [`None`] is returned.
-	/// Otherwise, the child is removed from this branch node's [children], but remains in the
-	/// [arena].
-	///
-	/// This function is useful if you want to move a [node] from one [parent] to another.
-	///
-	/// # See also
-	/// The [first child] may also be detached using [`detach_front`]. If this is a
-	/// [`BranchNodeDeque`], children may also be detached by index using [`detach`].
-	///
-	/// If you want to remove a child and its [descendants] from the [arena] altogether, see
-	/// [`pop_front`], [`pop_back`], or, if this is a [`BranchNodeDeque`], [`remove`].
-	///
-	/// [`detach_front`]: Self::detach_front
-	/// [`detach`]: Self::detach
-	///
-	/// [`pop_front`]: Self::pop_front
-	/// [`pop_back`]: Self::pop_back
-	/// [`remove`]: Self::remove
-	///
-	/// [first child]: Self::first
-	/// [last child]: Self::last
-	/// [empty]: Self::is_empty
-	/// [children]: Self::children
-	/// [descendants]: Self::descendants
-	/// [arena]: Arena
-	/// [node]: Node
-	/// [parent]: Node::parent
+	#[cfg_attrs {
+		/// Detaches this branch node's [last child], returning its token.
+		///
+		/// If this branch node is [empty] then there is no child to detach, so [`None`] is
+		/// returned. Otherwise, the child is removed from this branch node's [children], but
+		/// remains in the [arena].
+		///
+		/// This function is useful if you want to move a [node] from one [parent] to another.
+		///
+		/// # See also
+		/// The [first child] may also be detached using [`detach_front`].
+		#[configure(
+			feature = "deque",
+			/// If this is a [`BranchNodeDeque`], children may also be detached by index using
+			/// [`detach`].
+			///
+			/// [`detach`]: BranchNodeDeque::detach
+		)]
+		///
+		/// If you want to remove a child and its descendants from the [arena] altogether, see
+		#[configure(
+		feature = "deque",
+			/// [`pop_front`], [`pop_back`], or, if this is a [`BranchNodeDeque`], [`remove`].
+			///
+			/// [`remove`]: BranchNodeDeque::remove
+		)]
+		#[configure(
+			not(feature = "deque"),
+			/// [`pop_front`] and [`pop_back`].
+		)]
+		///
+		/// [`detach_front`]: Self::detach_front
+		///
+		/// [`pop_front`]: Self::pop_front
+		/// [`pop_back`]: Self::pop_back
+		/// [`remove`]: BranchNodeDeque::remove
+		///
+		/// [first child]: Self::first
+		/// [last child]: Self::last
+		/// [empty]: Self::is_empty
+		/// [children]: Self::children
+		/// [arena]: Arena
+		/// [node]: Node
+		/// [parent]: Node::parent
+	}]
 	#[inline]
 	fn detach_back(&self, arena: &mut Arena<N::Base>) -> Option<<N::Base as Node>::Token>
 	where
@@ -430,33 +471,48 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 		N::detach_back(*self, arena)
 	}
 
-	/// Removes this branch node's [first child].
-	///
-	/// If this branch node is [empty] then there is no child to remove, so [`None`] is returned.
-	/// Otherwise, the removed [node] is returned.
-	///
-	/// # See also
-	/// The [last child] may also be removed using [`pop_back`]. If this is a [`BranchNodeDeque`],
-	/// children may also be removed by index using [`remove`].
-	///
-	/// If you don't want to remove a child from the [arena], but merely make it a [root node] or
-	/// move it to another [parent], see [`detach_front`], [`detach_back`], or, if this is a
-	/// [`BranchNodeDeque`], [`detach`].
-	///
-	/// [`pop_back`]: Self::pop_back
-	/// [`remove`]: Self::remove
-	///
-	/// [`detach_front`]: Self::detach_front
-	/// [`detach_back`]: Self::detach_back
-	/// [`detach`]: Self::detach
-	///
-	/// [first child]: Self::first
-	/// [last child]: Self::last
-	/// [node]: BaseNode
-	/// [empty]: Self::is_empty
-	/// [arena]: Arena
-	/// [root node]: Self::root
-	/// [parent]: Self::parent
+	#[cfg_attrs {
+		/// Removes this branch node's [first child].
+		///
+		/// If this branch node is [empty] then there is no child to remove, so [`None`] is
+		/// returned. Otherwise, the removed [node] is returned.
+		///
+		/// # See also
+		/// The [last child] may also be removed using [`pop_back`].
+		#[configure(
+			feature = "deque",
+			/// If this is a [`BranchNodeDeque`], children may also be removed by index using
+			/// [`remove`].
+			///
+			/// [`remove`]: BranchNodeDeque::remove
+		)]
+		///
+		/// If you don't want to remove a child from the [arena], but merely make it a [root node]
+		/// or move it to another [parent], see
+		#[configure(
+			feature = "deque",
+			/// [`detach_front`], [`detach_back`], or, if this is a [`BranchNodeDeque`], [`detach`].
+			///
+			/// [`detach`]: BranchNodeDeque::detach
+		)]
+		#[configure(
+			not(feature = "deque"),
+			/// [`detach_front`] and [`detach_back`].
+		)]
+		///
+		/// [`pop_back`]: Self::pop_back
+		///
+		/// [`detach_front`]: Self::detach_front
+		/// [`detach_back`]: Self::detach_back
+		///
+		/// [first child]: Self::first
+		/// [last child]: Self::last
+		/// [node]: BaseNode
+		/// [empty]: Self::is_empty
+		/// [arena]: Arena
+		/// [root node]: Self::root
+		/// [parent]: Self::parent
+	}]
 	#[inline]
 	fn pop_front(&self, arena: &mut Arena<N::Base>) -> Option<<N::Base as BaseNode>::Representation>
 	where
@@ -466,33 +522,48 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 	{
 		N::pop_front(*self, arena)
 	}
-	/// Removes this branch node's [last child].
-	///
-	/// If this branch node is [empty] then there is no child to remove, so [`None`] is returned.
-	/// Otherwise, the removed [node] is returned.
-	///
-	/// # See also
-	/// The [first child] may also be removed using [`pop_front`]. If this is a [`BranchNodeDeque`],
-	/// children may also be removed by index using [`remove`].
-	///
-	/// If you don't want to remove a child from the [arena], but merely make it a [root node] or
-	/// move it to another [parent], see [`detach_front`], [`detach_back`], or, if this is a
-	/// [`BranchNodeDeque`], [`detach`].
-	///
-	/// [`pop_front`]: Self::pop_front
-	/// [`remove`]: Self::remove
-	///
-	/// [`detach_front`]: Self::detach_front
-	/// [`detach_back`]: Self::detach_back
-	/// [`detach`]: Self::detach
-	///
-	/// [first child]: Self::first
-	/// [last child]: Self::last
-	/// [node]: BaseNode
-	/// [empty]: Self::is_empty
-	/// [arena]: Arena
-	/// [root node]: Self::root
-	/// [parent]: Self::parent
+	#[cfg_attrs {
+		/// Removes this branch node's [last child].
+		///
+		/// If this branch node is [empty] then there is no child to remove, so [`None`] is
+		/// returned. Otherwise, the removed [node] is returned.
+		///
+		/// # See also
+		/// The [first child] may also be removed using [`pop_front`].
+		#[configure(
+			feature = "deque",
+			/// If this is a [`BranchNodeDeque`], children may also be removed by index using
+			/// [`remove`].
+			///
+			/// [`remove`]: BranchNodeDeque::remove
+		)]
+		///
+		/// If you don't want to remove a child from the [arena], but merely make it a [root node]
+		/// or move it to another [parent], see
+		#[configure(
+			feature = "deque",
+			/// [`detach_front`], [`detach_back`], or, if this is a [`BranchNodeDeque`], [`detach`].
+			///
+			/// [`detach`]: BranchNodeDeque::detach
+		)]
+		#[configure(
+			not(feature = "deque"),
+			/// [`detach_front`] and [`detach_back`].
+		)]
+		///
+		/// [`pop_front`]: Self::pop_front
+		///
+		/// [`detach_front`]: Self::detach_front
+		/// [`detach_back`]: Self::detach_back
+		///
+		/// [first child]: Self::first
+		/// [last child]: Self::last
+		/// [node]: BaseNode
+		/// [empty]: Self::is_empty
+		/// [arena]: Arena
+		/// [root node]: Self::root
+		/// [parent]: Self::parent
+	}]
 	#[inline]
 	fn pop_back(&self, arena: &mut Arena<N::Base>) -> Option<<N::Base as BaseNode>::Representation>
 	where
@@ -503,24 +574,32 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 		N::pop_front(*self, arena)
 	}
 
-	/// Pushes the given `new` token's [node] to the beginning of this branch node's [children].
-	///
-	/// # Panics
-	/// This method will panic if the given `new` token refers to either:
-	/// - this branch node's [root]; or
-	/// - a [node] that already has a [parent].
-	///
-	/// # See also
-	/// A child may also be pushed to the end with [`push_back`]. If this is a [`BranchNodeDeque`],
-	/// children may also be inserted by index using [`insert`].
-	///
-	/// [`push_back`]: Self::push_back
-	/// [`insert`]: Self::insert
-	///
-	/// [node]: BaseNode
-	/// [children]: Self::children
-	/// [root]: Self::root
-	/// [parent]: Node::parent
+	#[cfg_attrs {
+		/// Pushes the given `new` token's [node] to the beginning of this branch node's
+		/// [children].
+		///
+		/// # Panics
+		/// This method will panic if the given `new` token refers to either:
+		/// - this branch node's [root]; or
+		/// - a [node] that already has a [parent].
+		///
+		/// # See also
+		/// A child may also be pushed to the end with [`push_back`].
+		#[configure(
+		feature = "deque",
+			/// If this is a [`BranchNodeDeque`], [children] may also be inserted by index using
+			/// [`insert`].
+			///
+			/// [`insert`]: BranchNodeDeque::insert
+		)]
+		///
+		/// [`push_back`]: Self::push_back
+		///
+		/// [node]: BaseNode
+		/// [children]: Self::children
+		/// [root]: Self::root
+		/// [parent]: Node::parent
+	}]
 	#[inline]
 	fn push_front(&self, arena: &mut Arena<N::Base>, new: <N::Base as Node>::Token)
 	where
@@ -530,24 +609,32 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 	{
 		N::push_front(*self, arena, new);
 	}
-	/// Pushes the given `new` token's [node] to the end of this branch node's [children].
-	///
-	/// # Panics
-	/// This method will panic if the given `new` token refers to either:
-	/// - this branch node's [root]; or
-	/// - a [node] that already has a [parent].
-	///
-	/// # See also
-	/// A child may also be pushed to the beginning with [`push_front`]. If this is a
-	/// [`BranchNodeDeque`], children may also be inserted by index using [`insert`].
-	///
-	/// [`push_front`]: Self::push_front
-	/// [`insert`]: Self::insert
-	///
-	/// [node]: BaseNode
-	/// [children]: Self::children
-	/// [root]: Self::root
-	/// [parent]: Node::parent
+	#[cfg_attrs {
+		/// Pushes the given `new` token's [node] to the end of this branch node's [children].
+		///
+		/// # Panics
+		/// This method will panic if the given `new` token refers to either:
+		/// - this branch node's [root]; or
+		/// - a [node] that already has a [parent].
+		///
+		/// # See also
+		/// A child may also be pushed to the beginning with [`push_front`]. If this is a
+		/// [`BranchNodeDeque`], children may also be inserted by index using [`insert`].
+		#[configure(
+			feature = "deque",
+			/// If this is a [`BranchNodeDeque`], [children] may also be inserted by index using
+			/// [`insert`].
+			///
+			/// [`insert`]: BranchNodeDeque::insert
+		)]
+		///
+		/// [`push_front`]: Self::push_front
+		///
+		/// [node]: BaseNode
+		/// [children]: Self::children
+		/// [root]: Self::root
+		/// [parent]: Node::parent
+	}]
 	#[inline]
 	fn push_back(&self, arena: &mut Arena<N::Base>, new: <N::Base as Node>::Token)
 	where
@@ -558,6 +645,7 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 		N::push_back(*self, arena, new);
 	}
 
+	#[cfg(feature = "deque")]
 	/// Detaches the child at the given `index`, returning its token.
 	///
 	/// This function is useful if you want to move a [node] from one [parent] to another.
@@ -584,6 +672,7 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 	/// [parent]: Node::parent
 	/// [first child]: Self::first
 	/// [last child]: Self::last
+	#[doc(cfg(feature = "deque"))]
 	#[inline]
 	fn detach(&self, arena: &mut Arena<N::Base>, index: usize) -> <N::Base as Node>::Token
 	where
@@ -594,6 +683,7 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 		N::detach(*self, arena, index)
 	}
 
+	#[cfg(feature = "deque")]
 	/// Removes the child at the given `index`.
 	///
 	/// # Panics
@@ -618,6 +708,7 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 	/// [first child]: Self::first
 	/// [last child]: Self::last
 	/// [parent]: Node::parent
+	#[doc(cfg(feature = "deque"))]
 	#[inline]
 	fn remove(&self, arena: &mut Arena<N::Base>, index: usize) -> <N::Base as BaseNode>::Representation
 	where
@@ -628,6 +719,7 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 		N::remove(*self, arena, index)
 	}
 
+	#[cfg(feature = "deque")]
 	/// Inserts the given `new` token's [node] at the given `index`.
 	///
 	/// # Panics
@@ -652,6 +744,7 @@ pub trait NodeToken<N: Node>: Idx + Copy + PartialEq + Debug {
 	/// [parent]: Node::parent
 	///
 	/// [`len()`]: Self::len
+	#[doc(cfg(feature = "deque"))]
 	#[inline]
 	fn insert(&self, arena: &mut Arena<N::Base>, index: usize, new: <N::Base as Node>::Token)
 	where
@@ -869,10 +962,12 @@ pub trait BaseNode: Node<Base = Self> {
 		Self: Sized;
 }
 
+#[cfg(feature = "deque")]
 /// Removes the given children from the [branch node], returning their [representations].
 ///
 /// [branch node]: BranchNodeDeque
 /// [representations]: BaseNode::Representation
+#[doc(cfg(feature = "deque"))]
 pub(crate) fn remove_children_deque<Branch: BranchNodeDeque>(
 	branch: &Branch,
 	arena: &mut Arena<Branch::Base>,
@@ -891,6 +986,34 @@ pub(crate) fn remove_children_deque<Branch: BranchNodeDeque>(
 
 	children
 }
+
+/// Removes the given children from the [branch node], returning their [representations].
+///
+/// [branch node]: BranchNode
+/// [representations]: BaseNode::Representation
+pub(crate) fn remove_children_linked<Branch: BranchNode>(
+	branch: &Branch,
+	arena: &mut Arena<Branch::Base>,
+) -> VecDeque<<Branch::Base as BaseNode>::Representation>
+where
+	Branch::Base: LinkedNode,
+{
+	let mut children = VecDeque::new();
+	let mut child = branch.first();
+
+	while let Some(token) = &child {
+		let removed = arena
+			.0
+			.remove(token.idx())
+			.expect("tried to remove child but there was no such node in the `arena`");
+
+		child = removed.next();
+		children.push_back(removed.into_representation(arena));
+	}
+
+	children
+}
+
 /// A [node] that is linked to its [previous] and [next] siblings.
 ///
 /// [node]: Node
@@ -1005,205 +1128,282 @@ pub trait BranchNode: Node {
 	/// Returns whether this branch node has no children.
 	fn is_empty(&self) -> bool;
 
-	/// Detaches this branch node's [first child], returning its [token].
-	///
-	/// If this branch node is [empty] then there is no child to detach, so [`None`] is returned.
-	/// Otherwise, the child is removed from this branch node's [children], but remains in the
-	/// [arena].
-	///
-	/// This function is useful if you want to move a [node] from one [parent] to another.
-	///
-	/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to avoid
-	/// having multiple mutable references into the arena at a time.
-	///
-	/// # See also
-	/// The [last child] may also be detached using [`detach_back`]. If this is a
-	/// [`BranchNodeDeque`], children may also be detached by index using [`detach`].
-	///
-	/// If you want to remove a child and its descendants from the [arena] altogether, see
-	/// [`pop_front`], [`pop_back`], or, if this is a [`BranchNodeDeque`], [`remove`].
-	///
-	/// [`detach_back`]: Self::detach_back
-	/// [`detach`]: BranchNodeDeque::detach
-	///
-	/// [`pop_front`]: Self::pop_front
-	/// [`pop_back`]: Self::pop_back
-	/// [`remove`]: BranchNodeDeque::remove
-	///
-	/// [first child]: Self::first
-	/// [last child]: Self::last
-	/// [token]: Node::Token
-	/// [empty]: Self::is_empty
-	/// [children]: Self::children
-	/// [arena]: Arena
-	/// [node]: Node
-	/// [parent]: Node::parent
+	#[cfg_attrs {
+		/// Detaches this branch node's [first child], returning its [token].
+		///
+		/// If this branch node is [empty] then there is no child to detach, so [`None`] is
+		/// returned. Otherwise, the child is removed from this branch node's [children], but
+		/// remains in the [arena].
+		///
+		/// This function is useful if you want to move a [node] from one [parent] to another.
+		///
+		/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to
+		/// avoid having multiple mutable references into the arena at a time.
+		///
+		/// # See also
+		/// The [last child] may also be detached using [`detach_back`].
+		#[configure(
+			feature = "deque",
+			/// If this is a [`BranchNodeDeque`], children may also be detached by index using
+			/// [`detach`].
+			///
+			/// [`detach`]: BranchNodeDeque::detach
+		)]
+		///
+		/// If you want to remove a child and its descendants from the [arena] altogether, see
+		#[configure(
+			feature = "deque",
+			/// [`pop_front`], [`pop_back`], or, if this is a [`BranchNodeDeque`], [`remove`].
+			///
+			/// [`remove`]: BranchNodeDeque::remove
+		)]
+		#[configure(
+			not(feature = "deque"),
+			/// [`pop_front`] and [`pop_back`].
+		)]
+		///
+		/// [`detach_back`]: Self::detach_back
+		///
+		/// [`pop_front`]: Self::pop_front
+		/// [`pop_back`]: Self::pop_back
+		///
+		/// [first child]: Self::first
+		/// [last child]: Self::last
+		/// [token]: Node::Token
+		/// [empty]: Self::is_empty
+		/// [children]: Self::children
+		/// [arena]: Arena
+		/// [node]: Node
+		/// [parent]: Node::parent
+	}]
 	fn detach_front(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as Node>::Token>
 	where
 		Self: Sized,
 		for<'base> &'base mut Self: TryFrom<&'base mut Self::Base>,
 		for<'base> <&'base mut Self as TryFrom<&'base mut Self::Base>>::Error: Debug;
-	/// Detaches this branch node's [last child], returning its [token].
-	///
-	/// If this branch node is [empty] then there is no child to detach, so [`None`] is returned.
-	/// Otherwise, the child is removed from this branch node's [children], but remains in the
-	/// [arena].
-	///
-	/// This function is useful if you want to move a [node] from one [parent] to another.
-	///
-	/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to avoid
-	/// having multiple mutable references into the arena at a time.
-	///
-	/// # See also
-	/// The [first child] may also be detached using [`detach_front`]. If this is a
-	/// [`BranchNodeDeque`], children may also be detached by index using [`detach`].
-	///
-	/// If you want to remove a child and its descendants from the [arena] altogether, see
-	/// [`pop_front`], [`pop_back`], or, if this is a [`BranchNodeDeque`], [`remove`].
-	///
-	/// [`detach_front`]: Self::detach_front
-	/// [`detach`]: BranchNodeDeque::detach
-	///
-	/// [`pop_front`]: Self::pop_front
-	/// [`pop_back`]: Self::pop_back
-	/// [`remove`]: BranchNodeDeque::remove
-	///
-	/// [first child]: Self::first
-	/// [last child]: Self::last
-	/// [token]: Node::Token
-	/// [empty]: Self::is_empty
-	/// [children]: Self::children
-	/// [arena]: Arena
-	/// [node]: Node
-	/// [parent]: Node::parent
+	#[cfg_attrs {
+		/// Detaches this branch node's [last child], returning its [token].
+		///
+		/// If this branch node is [empty] then there is no child to detach, so [`None`] is
+		/// returned. Otherwise, the child is removed from this branch node's [children], but
+		/// remains in the [arena].
+		///
+		/// This function is useful if you want to move a [node] from one [parent] to another.
+		///
+		/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to
+		/// avoid having multiple mutable references into the arena at a time.
+		///
+		/// # See also
+		/// The [first child] may also be detached using [`detach_front`].
+		#[configure(
+			feature = "deque",
+			/// If this is a [`BranchNodeDeque`], children may also be detached by index using
+			/// [`detach`].
+			///
+			/// [`detach`]: BranchNodeDeque::detach
+		)]
+		///
+		/// If you want to remove a child and its descendants from the [arena] altogether, see
+		#[configure(
+			feature = "deque",
+			/// [`pop_front`], [`pop_back`], or, if this is a [`BranchNodeDeque`], [`remove`].
+			///
+			/// [`remove`]: BranchNodeDeque::remove
+		)]
+		#[configure(
+			not(feature = "deque"),
+			/// [`pop_front`] and [`pop_back`].
+		)]
+		///
+		/// [`detach_front`]: Self::detach_front
+		///
+		/// [`pop_front`]: Self::pop_front
+		/// [`pop_back`]: Self::pop_back
+		/// [`remove`]: BranchNodeDeque::remove
+		///
+		/// [first child]: Self::first
+		/// [last child]: Self::last
+		/// [token]: Node::Token
+		/// [empty]: Self::is_empty
+		/// [children]: Self::children
+		/// [arena]: Arena
+		/// [node]: Node
+		/// [parent]: Node::parent
+	}]
 	fn detach_back(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as Node>::Token>
 	where
 		Self: Sized,
 		for<'base> &'base mut Self: TryFrom<&'base mut Self::Base>,
 		for<'base> <&'base mut Self as TryFrom<&'base mut Self::Base>>::Error: Debug;
 
-	/// Removes this branch node's [first child].
-	///
-	/// If this branch node is [empty] then there is no child to remove, so [`None`] is returned.
-	/// Otherwise, the removed [node] is returned.
-	///
-	/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to avoid
-	/// having multiple mutable references into the arena at a time.
-	///
-	/// # See also
-	/// The [last child] may also be removed using [`pop_back`]. If this is a [`BranchNodeDeque`],
-	/// children may also be removed by index using [`remove`].
-	///
-	/// If you don't want to remove a child from the [arena], but merely make it a [root node] or
-	/// move it to another [parent], see [`detach_front`], [`detach_back`], or, if this is a
-	/// [`BranchNodeDeque`], [`detach`].
-	///
-	/// [`pop_back`]: Self::pop_back
-	/// [`remove`]: BranchNodeDeque::remove
-	///
-	/// [`detach_front`]: Self::detach_front
-	/// [`detach_back`]: Self::detach_back
-	/// [`detach`]: BranchNodeDeque::detach
-	///
-	/// [first child]: Self::first
-	/// [last child]: Self::last
-	/// [node]: BaseNode
-	/// [empty]: Self::is_empty
-	/// [token]: Self::Token
-	/// [arena]: Arena
-	/// [root node]: Self::root
-	/// [parent]: Self::parent
+	#[cfg_attrs {
+		/// Removes this branch node's [first child].
+		///
+		/// If this branch node is [empty] then there is no child to remove, so [`None`] is
+		/// returned. Otherwise, the removed [node] is returned.
+		///
+		/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to
+		/// avoid having multiple mutable references into the arena at a time.
+		///
+		/// # See also
+		/// The [last child] may also be removed using [`pop_back`].
+		#[configure(
+			feature = "deque",
+			/// If this is a [`BranchNodeDeque`], children may also be removed by index using
+			/// [`remove`].
+			///
+			/// [`remove`]: BranchNodeDeque::remove
+		)]
+		///
+		/// If you don't want to remove a child from the [arena], but merely make it a [root node]
+		/// or move it to another [parent], see
+		#[configure(
+			feature = "deque",
+			/// [`detach_front`], [`detach_back`], or, if this is a [`BranchNodeDeque`], [`detach`].
+			///
+			/// [`detach`]: BranchNodeDeque::detach
+		)]
+		#[configure(
+			not(feature = "deque"),
+			/// [`detach_front`] and [`detach_back`].
+		)]
+		///
+		/// [`pop_back`]: Self::pop_back
+		///
+		/// [`detach_front`]: Self::detach_front
+		/// [`detach_back`]: Self::detach_back
+		///
+		/// [first child]: Self::first
+		/// [last child]: Self::last
+		/// [node]: BaseNode
+		/// [empty]: Self::is_empty
+		/// [token]: Self::Token
+		/// [arena]: Arena
+		/// [root node]: Self::root
+		/// [parent]: Self::parent
+	}]
 	fn pop_front(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as BaseNode>::Representation>
 	where
 		Self: Sized,
 		for<'base> &'base mut Self: TryFrom<&'base mut Self::Base>,
 		for<'base> <&'base mut Self as TryFrom<&'base mut Self::Base>>::Error: Debug;
-	/// Removes this branch node's [last child].
-	///
-	/// If this branch node is [empty] then there is no child to remove, so [`None`] is returned.
-	/// Otherwise, the removed [node] is returned.
-	///
-	/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to avoid
-	/// having multiple mutable references into the arena at a time.
-	///
-	/// # See also
-	/// The [first child] may also be removed using [`pop_front`]. If this is a [`BranchNodeDeque`],
-	/// children may also be removed by index using [`remove`].
-	///
-	/// If you don't want to remove a child from the [arena], but merely make it a [root node] or
-	/// move it to another [parent], see [`detach_front`], [`detach_back`], or, if this is a
-	/// [`BranchNodeDeque`], [`detach`].
-	///
-	/// [`pop_front`]: Self::pop_front
-	/// [`remove`]: BranchNodeDeque::remove
-	///
-	/// [`detach_front`]: Self::detach_front
-	/// [`detach_back`]: Self::detach_back
-	/// [`detach`]: BranchNodeDeque::detach
-	///
-	/// [first child]: Self::first
-	/// [last child]: Self::last
-	/// [node]: BaseNode
-	/// [empty]: Self::is_empty
-	/// [token]: Self::Token
-	/// [arena]: Arena
-	/// [root node]: Self::root
-	/// [parent]: Self::parent
+	#[cfg_attrs {
+		/// Removes this branch node's [last child].
+		///
+		/// If this branch node is [empty] then there is no child to remove, so [`None`] is
+		/// returned. Otherwise, the removed [node] is returned.
+		///
+		/// This function takes its [token] as a parameter instead of `&mut self` as a receiver
+		/// avoid having multiple mutable references into the arena at a time.
+		///
+		/// # See also
+		/// The [first child] may also be removed using [`pop_front`].
+		#[configure(
+			feature = "deque",
+			/// If this is a [`BranchNodeDeque`], children may also be removed by index using
+			/// [`remove`].
+			///
+			/// [`remove`]: BranchNodeDeque::remove
+		)]
+		///
+		/// If you don't want to remove a child from the [arena], but merely make it a [root node]
+		/// or move it to another [parent], see
+		#[configure(
+			feature = "deque",
+			/// [`detach_front`], [`detach_back`], or, if this is a [`BranchNodeDeque`], [`detach`].
+			///
+			/// [`detach`]: BranchNodeDeque::detach
+		)]
+		#[configure(
+			not(feature = "deque"),
+			/// [`detach_front`] and [`detach_back`].
+		)]
+		///
+		/// [`pop_front`]: Self::pop_front
+		///
+		/// [`detach_front`]: Self::detach_front
+		/// [`detach_back`]: Self::detach_back
+		///
+		/// [first child]: Self::first
+		/// [last child]: Self::last
+		/// [node]: BaseNode
+		/// [empty]: Self::is_empty
+		/// [token]: Self::Token
+		/// [arena]: Arena
+		/// [root node]: Self::root
+		/// [parent]: Self::parent
+	}]
 	fn pop_back(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as BaseNode>::Representation>
 	where
 		Self: Sized,
 		for<'base> &'base mut Self: TryFrom<&'base mut Self::Base>,
 		for<'base> <&'base mut Self as TryFrom<&'base mut Self::Base>>::Error: Debug;
 
-	/// Pushes the given `new` [token]'s [node] to the beginning of this branch node's [children].
-	///
-	/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to avoid
-	/// having multiple mutable references into the arena at a time.
-	///
-	/// # Panics
-	/// This method will panic if the given `new` [token] refers to either:
-	/// - this branch node's [root]; or
-	/// - a [node] that already has a [parent].
-	///
-	/// # See also
-	/// A child may also be pushed to the end with [`push_back`]. If this is a [`BranchNodeDeque`],
-	/// children may also be inserted by index using [`insert`].
-	///
-	/// [`push_back`]: Self::push_back
-	/// [`insert`]: BranchNodeDeque::insert
-	///
-	/// [token]: Self::Token
-	/// [node]: BaseNode
-	/// [children]: Self::children
-	/// [root]: Self::root
-	/// [parent]: Node::parent
+	#[cfg_attrs {
+		/// Pushes the given `new` [token]'s [node] to the beginning of this branch node's
+		/// [children].
+		///
+		/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to
+		/// avoid having multiple mutable references into the arena at a time.
+		///
+		/// # Panics
+		/// This method will panic if the given `new` [token] refers to either:
+		/// - this branch node's [root]; or
+		/// - a [node] that already has a [parent].
+		///
+		/// # See also
+		/// A child may also be pushed to the end with [`push_back`].
+		#[configure(
+			feature = "deque",
+			/// If this is a [`BranchNodeDeque`], [children] may also be inserted by index using
+			/// [`insert`].
+			///
+			/// [`insert`]: BranchNodeDeque::insert
+		)]
+		///
+		/// [`push_back`]: Self::push_back
+		///
+		/// [token]: Self::Token
+		/// [node]: BaseNode
+		/// [children]: Self::children
+		/// [root]: Self::root
+		/// [parent]: Node::parent
+	}]
 	fn push_front(token: Self::Token, arena: &mut Arena<Self::Base>, new: <Self::Base as Node>::Token)
 	where
 		Self: Sized,
 		for<'base> &'base mut Self: TryFrom<&'base mut Self::Base>,
 		for<'base> <&'base mut Self as TryFrom<&'base mut Self::Base>>::Error: Debug;
-	/// Pushes the given `new` [token]'s [node] to the end of this branch node's [children].
-	///
-	/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to avoid
-	/// having multiple mutable references into the arena at a time.
-	///
-	/// # Panics
-	/// This method will panic if the given `new` [token] refers to either:
-	/// - this branch node's [root]; or
-	/// - a [node] that already has a [parent].
-	///
-	/// # See also
-	/// A child may also be pushed to the beginning with [`push_front`]. If this is a
-	/// [`BranchNodeDeque`], children may also be inserted by index using [`insert`].
-	///
-	/// [`push_front`]: Self::push_front
-	/// [`insert`]: BranchNodeDeque::insert
-	///
-	/// [token]: Self::Token
-	/// [node]: BaseNode
-	/// [children]: Self::children
-	/// [root]: Self::root
-	/// [parent]: Node::parent
+	#[cfg_attrs {
+		/// Pushes the given `new` [token]'s [node] to the end of this branch node's [children].
+		///
+		/// This function takes its [token] as a parameter instead of `&mut self` as a receiver to
+		/// avoid having multiple mutable references into the arena at a time.
+		///
+		/// # Panics
+		/// This method will panic if the given `new` [token] refers to either:
+		/// - this branch node's [root]; or
+		/// - a [node] that already has a [parent].
+		///
+		/// # See also
+		/// A child may also be pushed to the beginning with [`push_front`]. If this is a
+		/// [`BranchNodeDeque`], children may also be inserted by index using [`insert`].
+		#[configure(
+			feature = "deque",
+			/// If this is a [`BranchNodeDeque`], [children] may also be inserted by index using
+			/// [`insert`].
+			///
+			/// [`insert`]: BranchNodeDeque::insert
+		)]
+		///
+		/// [`push_front`]: Self::push_front
+		///
+		/// [token]: Self::Token
+		/// [node]: BaseNode
+		/// [children]: Self::children
+		/// [root]: Self::root
+		/// [parent]: Node::parent
+	}]
 	fn push_back(token: Self::Token, arena: &mut Arena<Self::Base>, new: <Self::Base as Node>::Token)
 	where
 		Self: Sized,
@@ -1211,12 +1411,14 @@ pub trait BranchNode: Node {
 		for<'base> <&'base mut Self as TryFrom<&'base mut Self::Base>>::Error: Debug;
 }
 
+#[cfg(feature = "deque")]
 /// A [node] that stores its [children] as a [`VecDeque`], allowing them to be [indexed].
 ///
 /// [node]: Node
 /// [children]: Self::children
 ///
 /// [indexed]: Index
+#[doc(cfg(feature = "deque"))]
 pub trait BranchNodeDeque: BranchNode
 where
 	Self: Index<usize, Output = <Self::Base as Node>::Token> + Sized,

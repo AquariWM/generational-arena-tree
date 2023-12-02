@@ -8,6 +8,7 @@ use std::{
 	hash::{Hash, Hasher},
 };
 
+use cfg_attrs::cfg_attrs;
 use generational_arena::Index;
 
 use crate::{
@@ -23,23 +24,46 @@ use crate::{
 	Token,
 };
 
+#[cfg(feature = "deque")]
+#[doc(cfg(feature = "deque"))]
+mod deque;
+
+#[cfg(feature = "deque")]
+pub use deque::*;
+
 type BranchToken<BranchData, LeafData> = Token<Branch<BranchData, LeafData>>;
 type LeafToken<BranchData, LeafData> = Token<Leaf<BranchData, LeafData>>;
 
-/// A [node] that is split into separate [branch] and [leaf] nodes.
-///
-/// [`BranchData`] represents the [custom data](Branch::Data) associated with [branches], while
-/// [`LeafData`] represents the [custom data](Leaf::Data) associated with [leaves].
-///
-/// For a [node] that _isn't_ split into separate branch and leaf nodes, see [`UnifiedNode`].
-///
-/// [`UnifiedNode`]: crate::unified::UnifiedNode
-///
-/// [node]: Node
-/// [branch]: Branch
-/// [branches]: Branch
-/// [leaf]: Leaf
-/// [leaves]: Leaf
+#[cfg_attrs {
+	/// A [node] that is split into separate [branch] and [leaf] nodes.
+	///
+	/// [`BranchData`] represents the [custom data](Branch::Data) associated with [branches], while
+	/// [`LeafData`] represents the [custom data](Leaf::Data) associated with [leaves].
+	///
+	#[configure(
+		any(feature = "unified", feature = "deque"),
+		/// # See also
+		#[configure(
+			feature = "deque",
+			/// For the [deque] version, see [`SplitNodeDeque`].
+			///
+			/// [deque]: crate::BranchNodeDeque
+			///
+		)]
+		#[configure(
+			feature = "unified",
+			/// For a [node] that _isn't_ split into separate branch and leaf nodes, see [`UnifiedNode`].
+			///
+			/// [`UnifiedNode`]: crate::unified::UnifiedNode
+			///
+		)]
+	)]
+	/// [node]: Node
+	/// [branch]: Branch
+	/// [branches]: Branch
+	/// [leaf]: Leaf
+	/// [leaves]: Leaf
+}]
 #[derive(Debug)]
 pub enum SplitNode<BranchData: Debug, LeafData: Debug> {
 	/// A [branch] node that may have children.

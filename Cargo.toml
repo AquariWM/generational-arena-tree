@@ -6,9 +6,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = ["vec_deque_children"]
-vec_deque_children = []
+default = ["unified", "split", "deque"]
+
+unified = []
+split = []
+deque = []
 
 [dependencies]
 generational-arena = "0.2.9"
 thiserror = "1.0.50"
+
+cfg_attrs = "2.1.1"

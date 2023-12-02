@@ -22,6 +22,37 @@ use crate::{
 	Token,
 };
 
+/// A [node] that is _not_ split into separate [branch] and leaf [nodes].
+///
+/// This is the [deque] version, where [children] are represented as a [`VecDeque`]. In this
+/// version, a node's [previous sibling][prev][(s)][preceding] and
+/// [next sibling][next][(s)][following] are not available, but the [node] can be
+/// [directly indexed], and children can be [detached], [removed], or [inserted] by index.
+///
+/// [`Data`] represents the [custom data] associated with the node.
+///
+/// # See also
+/// For the non-[deque] version, see [`UnifiedNode`].
+///
+/// For a [node] that _is_ split into separate [branch] and leaf [nodes], see [`SplitNode`] and
+/// [`SplitNodeDeque`].
+///
+/// [node]: Node
+/// [nodes]: Node
+/// [branch]: BranchNode
+/// [custom data]: UnifiedNodeDeque::Data
+///
+/// [deque]: BranchNodeDeque
+/// [children]: UnifiedNodeDeque::children
+/// [directly indexed]: UnifiedNodeDeque::index
+/// [detached]: UnifiedNodeDeque::detach
+/// [removed]: UnifiedNodeDeque::remove
+/// [inserted]: UnifiedNodeDeque::insert
+///
+/// [prev]: crate::LinkedNode::prev
+/// [preceding]: crate::LinkedNode::preceding_siblings
+/// [next]: crate::LinkedNode::next
+/// [following]: crate::LinkedNode::following_siblings
 #[derive(Debug)]
 pub struct UnifiedNodeDeque<Data: Debug> {
 	token: Token<Self>,

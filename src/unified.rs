@@ -8,6 +8,8 @@ use std::{
 	hash::{Hash, Hasher},
 };
 
+use cfg_attrs::cfg_attrs;
+
 use crate::{
 	iter,
 	remove_children_linked,
@@ -21,20 +23,63 @@ use crate::{
 	Token,
 };
 
+#[cfg(feature = "deque")]
 mod deque;
 
-/// A [node] that is _not_ split into separate [branch] and leaf [nodes].
-///
-/// [`Data`] represents the [custom data] associated with the the node.
-///
-/// For a [node] that _is_ split into separate [branch] and leaf [nodes], see [`SplitNode`].
-///
-/// [`SplitNode`]: crate::split::SplitNode
-///
-/// [node]: Node
-/// [nodes]: Node
-/// [branch]: BranchNode
-/// [custom data]: UnifiedNode::Data
+#[cfg(feature = "deque")]
+#[doc(cfg(feature = "deque"))]
+pub use deque::*;
+
+#[cfg_attrs {
+	/// A [node] that is _not_ split into separate [branch] and leaf [nodes].
+	///
+	#[configure(
+		feature = "deque",
+		/// This is the non-[deque] version, where [children] are represented as a linked list. In
+		/// this version, a [node]'s [previous sibling][prev][(s)][preceding] and
+		/// [next sibling][next][(s)][following] are available, but [nodes] cannot be
+		/// [directly indexed], nor can [children] be [detached], [removed], or [inserted] by index.
+		///
+		/// [deque]: crate::BranchNodeDeque
+		/// [children]: UnifiedNode::children
+		///
+		/// [directly indexed]: UnifiedNodeDeque::index
+		/// [detached]: UnifiedNodeDeque::detach
+		/// [removed]: UnifiedNodeDeque::remove
+		/// [inserted]: UnifiedNodeDeque::insert
+		///
+		/// [prev]: UnifiedNode::prev
+		/// [preceding]: UnifiedNode::preceding_siblings
+		/// [next]: UnifiedNode::next
+		/// [following]: UnifiedNode::following_siblings
+		///
+	)]
+	/// [`Data`] represents the [custom data] associated with the the node.
+	///
+	#[configure(
+		any(feature = "split", feature = "deque"),
+		/// # See also
+		#[configure(
+			feature = "deque",
+			/// For the [deque] version, see [`UnifiedNodeDeque`].
+			///
+			/// [deque]: crate::BranchNodeDeque
+			///
+		)]
+		#[configure(
+			feature = "split",
+			/// For a [node] that _is_ split into separate [branch] and leaf [nodes], see
+			/// [`SplitNode`].
+			///
+			/// [`SplitNode`]: crate::split::SplitNode
+			///
+		)]
+	)]
+	/// [node]: Node
+	/// [nodes]: Node
+	/// [branch]: BranchNode
+	/// [custom data]: UnifiedNode::Data
+}]
 #[derive(Debug)]
 pub struct UnifiedNode<Data: Debug> {
 	token: Token<Self>,
