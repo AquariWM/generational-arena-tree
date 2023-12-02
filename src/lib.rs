@@ -24,6 +24,7 @@ pub(crate) use token_to_node;
 pub type ArenaIndex = generational_arena::Index;
 
 use std::{
+	collections::VecDeque,
 	fmt::{Debug, Formatter},
 	hash::{Hash, Hasher},
 	iter::FusedIterator,
@@ -863,11 +864,33 @@ pub trait BaseNode: Node<Base = Self> {
 	///
 	/// [representation]: Self::Representation
 	/// [branch node]: BranchNode
-	fn into_representation(self, arena: &mut Arena<Self::Base>) -> Self::Representation
+	fn into_representation(self, arena: &mut Arena<Self>) -> Self::Representation
 	where
 		Self: Sized;
 }
 
+/// Removes the given children from the [branch node], returning their [representations].
+///
+/// [branch node]: BranchNodeDeque
+/// [representations]: BaseNode::Representation
+pub(crate) fn remove_children_deque<Branch: BranchNodeDeque>(
+	branch: &Branch,
+	arena: &mut Arena<Branch::Base>,
+) -> VecDeque<<Branch::Base as BaseNode>::Representation> {
+	let mut children = VecDeque::new();
+
+	for i in 0..branch.len() {
+		children.push_back(
+			arena
+				.0
+				.remove(branch[i].idx())
+				.expect("tried to remove child but there was no such node in the `arena`")
+				.into_representation(arena),
+		);
+	}
+
+	children
+}
 /// A [node] that is linked to its [previous] and [next] siblings.
 ///
 /// [node]: Node
@@ -956,6 +979,8 @@ pub trait BranchNode: Node {
 	/// [token]: Self::Token
 	fn last(&self) -> Option<<Self::Base as Node>::Token>;
 
+	// TODO: Should there be a separate version for linked branch nodes and `BranchNodeDeque`s? For
+	//     : `BranchNodeDeque`s, `arena` is not necessary.
 	/// Returns an iterator over the [tokens] of this branch node's children.
 	///
 	/// [tokens]: Self::Token
@@ -1191,7 +1216,6 @@ pub trait BranchNode: Node {
 /// [node]: Node
 /// [children]: Self::children
 ///
-/// [`VecDeque`]: std::collections::VecDeque
 /// [indexed]: Index
 pub trait BranchNodeDeque: BranchNode
 where
@@ -1205,7 +1229,7 @@ where
 	/// If `index` is out of bounds, [`None`] is returned.
 	///
 	/// [token]: Node::Token
-	#[inline(always)]
+	#[inline]
 	fn get(&self, index: usize) -> Option<<Self::Base as Node>::Token> {
 		if index < self.len() {
 			Some(self[index])
@@ -1323,51 +1347,8 @@ where
 
 /// An arena in which nodes are allocated.
 ///
-/// Nodes are accessed by using the index operator with their [arena index].
-///
 /// # Examples
-/// ```
-/// // TODO
-/// // # use generational_arena_tree::{Arena, _typed};
-/// // #
-/// // let mut arena = Arena::new();
-///
-/// // let root = _typed::Branch::new_root(&mut arena, "Germanic");
-///
-/// // It's fine to use `as_branch_mut` here
-/// // because we know `root` is a branch.
-/// // let west_germanic = arena[root]
-/// //     .as_branch_mut()
-/// //     .push_branch_back(&mut arena, "West Germanic");
-///
-/// // West Germanic languages.
-/// // arena[west_germanic]
-/// //     .as_branch_mut()
-/// //     .push_leaf_back(&mut arena, "English");
-/// // arena[west_germanic]
-/// //     .as_branch_mut()
-/// //     .push_leaf_back(&mut arena, "German");
-/// // arena[west_germanic]
-/// //     .as_branch_mut()
-/// //     .push_leaf_back(&mut arena, "Dutch");
-///
-/// // let north_germanic = arena[root]
-/// //     .as_branch_mut()
-/// //    .push_branch_back(&mut arena, "North Germanic");
-///
-/// // North Germanic languages.
-/// // arena[north_germanic]
-/// //     .as_branch_mut()
-/// //     .push_leaf_back(&mut arena, "Swedish");
-/// // arena[north_germanic]
-/// //     .as_branch_mut()
-/// //     .push_leaf_back(&mut arena, "Danish");
-/// // arena[north_germanic]
-/// //     .as_branch_mut()
-/// //     .push_leaf_back(&mut arena, "Norwegian");
-/// ```
-///
-/// [arena index]: ArenaIndex
+/// TODO
 #[derive(Debug, Default)]
 pub struct Arena<Node>(pub(crate) generational_arena::Arena<Node>);
 

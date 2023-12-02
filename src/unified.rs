@@ -10,6 +10,7 @@ use std::{
 
 use crate::{
 	iter,
+	remove_children_linked,
 	sealed::{Idx, Sealed},
 	Arena,
 	BaseNode,
@@ -98,10 +99,7 @@ impl<Data: Debug> Node for UnifiedNode<Data> {
 	where
 		Self: 'data;
 
-	fn new(arena: &mut Arena<Self::Base>, data: Self::Data) -> Self::Token
-	where
-		Self: Sized,
-	{
+	fn new(arena: &mut Arena<Self::Base>, data: Self::Data) -> Self::Token {
 		Token::new(arena.0.insert_with(|idx| Self {
 			token: Token::new(idx),
 
@@ -118,10 +116,7 @@ impl<Data: Debug> Node for UnifiedNode<Data> {
 	}
 
 	#[inline(always)]
-	fn token(&self) -> Self::Token
-	where
-		Self: Sized,
-	{
+	fn token(&self) -> Self::Token {
 		self.token
 	}
 
@@ -147,27 +142,9 @@ impl<Data: Debug> BaseNode for UnifiedNode<Data> {
 	type Branch = Self;
 	type Leaf = Self;
 
-	fn into_representation(self, arena: &mut Arena<Self::Base>) -> Self::Representation
-	where
-		Self: Sized,
-	{
-		let mut children = VecDeque::new();
-		let mut child = self.first_child;
-
-		while let Some(token) = &child {
-			children.push_back(
-				arena
-					.0
-					.remove(token.idx())
-					.expect("tried to remove child but there was no such child in the `arena`")
-					.into_representation(arena),
-			);
-
-			child = Some(*token);
-		}
-
+	fn into_representation(self, arena: &mut Arena<Self>) -> Self::Representation {
 		UnifiedNodeRepresentation {
-			children,
+			children: remove_children_linked(&self, arena),
 			data: self.data,
 		}
 	}
@@ -212,10 +189,7 @@ impl<Data: Debug> BranchNode for UnifiedNode<Data> {
 		self.first_child.is_none()
 	}
 
-	fn detach_front(token: Self::Token, arena: &mut Arena<Self>) -> Option<Token<Self>>
-	where
-		Self: Sized,
-	{
+	fn detach_front(token: Self::Token, arena: &mut Arena<Self>) -> Option<Token<Self>> {
 		let this = &mut arena.0[token.idx()];
 
 		match (this.first_child, this.last_child) {
@@ -263,10 +237,7 @@ impl<Data: Debug> BranchNode for UnifiedNode<Data> {
 		}
 	}
 
-	fn detach_back(token: Self::Token, arena: &mut Arena<Self>) -> Option<Token<Self>>
-	where
-		Self: Sized,
-	{
+	fn detach_back(token: Self::Token, arena: &mut Arena<Self>) -> Option<Token<Self>> {
 		let this = &mut arena.0[token.idx()];
 
 		match (this.first_child, this.last_child) {
@@ -314,10 +285,7 @@ impl<Data: Debug> BranchNode for UnifiedNode<Data> {
 		}
 	}
 
-	fn pop_front(token: Self::Token, arena: &mut Arena<Self>) -> Option<UnifiedNodeRepresentation<Data>>
-	where
-		Self: Sized,
-	{
+	fn pop_front(token: Self::Token, arena: &mut Arena<Self>) -> Option<UnifiedNodeRepresentation<Data>> {
 		let this = &mut arena.0[token.idx()];
 
 		match (this.first_child, this.last_child) {
@@ -361,10 +329,7 @@ impl<Data: Debug> BranchNode for UnifiedNode<Data> {
 		}
 	}
 
-	fn pop_back(token: Self::Token, arena: &mut Arena<Self>) -> Option<UnifiedNodeRepresentation<Data>>
-	where
-		Self: Sized,
-	{
+	fn pop_back(token: Self::Token, arena: &mut Arena<Self>) -> Option<UnifiedNodeRepresentation<Data>> {
 		let this = &mut arena.0[token.idx()];
 
 		match (this.first_child, this.last_child) {
@@ -408,10 +373,7 @@ impl<Data: Debug> BranchNode for UnifiedNode<Data> {
 		}
 	}
 
-	fn push_front(token: Self::Token, arena: &mut Arena<Self>, new: Token<Self>)
-	where
-		Self: Sized,
-	{
+	fn push_front(token: Self::Token, arena: &mut Arena<Self>, new: Token<Self>) {
 		// We're not pushing our own root...
 		assert_ne!(
 			arena.0[token.idx()].root(arena),
@@ -429,6 +391,7 @@ impl<Data: Debug> BranchNode for UnifiedNode<Data> {
 
 		let this = &mut arena.0[token.idx()];
 
+		// Push the child's token.
 		match (this.first_child, this.last_child) {
 			// One or more existing children.
 			(Some(first), Some(_)) => {
@@ -448,10 +411,7 @@ impl<Data: Debug> BranchNode for UnifiedNode<Data> {
 		}
 	}
 
-	fn push_back(token: Self::Token, arena: &mut Arena<Self>, new: Token<Self>)
-	where
-		Self: Sized,
-	{
+	fn push_back(token: Self::Token, arena: &mut Arena<Self>, new: Token<Self>) {
 		// We're not pushing our own root...
 		assert_ne!(
 			arena.0[token.idx()].root(arena),
@@ -469,6 +429,7 @@ impl<Data: Debug> BranchNode for UnifiedNode<Data> {
 
 		let this = &mut arena.0[token.idx()];
 
+		// Push the child's token.
 		match (this.first_child, this.last_child) {
 			// One or more existing children.
 			(Some(_), Some(last)) => {
