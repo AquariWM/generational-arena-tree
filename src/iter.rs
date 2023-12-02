@@ -151,7 +151,7 @@ where
 	for<'base> &'base Branch: TryFrom<&'base Branch::Base>,
 {
 	#[inline(always)]
-	pub(super) const fn new(branch: &Branch, arena: &'arena Arena<Branch::Base>) -> Self {
+	pub(super) fn new(branch: &'arena Branch, arena: &'arena Arena<Branch::Base>) -> Self {
 		Self {
 			arena,
 
@@ -258,41 +258,45 @@ where
 
 	fn next(&mut self) -> Option<Self::Item> {
 		// Next descendant's token.
-		let token = self.current.as_mut().and_then(|iter| match iter.next() {
-			// If `current` has another token, use that.
-			Some(token) => Some(token),
+		let token = match &mut self.current {
+			None => None,
 
-			// If `current` doesn't have another token, try to find a `ChildrenIter` in the stack
-			// that does.
-			None => {
-				self.current = None;
-				let mut token = None;
+			Some(iter) => match iter.next() {
+				// If `current` has another token, use that.
+				Some(token) => Some(token),
 
-				// Find the first `ChildrenIter` in the stack that has at least one child.
-				//
-				// NOTE: Going through multiple options to try to find a `ChildrenIter` in the stack
-				//     : that has at least one child, rather than trying next `next()` call, is
-				//     : required to ensure that this is a `FusedIterator`.
-				while let Some(mut iter) = self.stack.pop_front() {
-					match iter.next() {
-						// This `ChildrenIter` has at least one child: update `self.current` and use
-						// that child.
-						Some(child) => {
-							self.current = Some(iter);
-							token = Some(child);
+				// If `current` doesn't have another token, try to find a `ChildrenIter` in the stack
+				// that does.
+				None => {
+					self.current = None;
+					let mut token = None;
 
-							break;
-						},
+					// Find the first `ChildrenIter` in the stack that has at least one child.
+					//
+					// NOTE: Going through multiple options to try to find a `ChildrenIter` in the stack
+					//     : that has at least one child, rather than trying next `next()` call, is
+					//     : required to ensure that this is a `FusedIterator`.
+					while let Some(mut iter) = self.stack.pop_front() {
+						match iter.next() {
+							// This `ChildrenIter` has at least one child: update `self.current` and use
+							// that child.
+							Some(child) => {
+								self.current = Some(iter);
+								token = Some(child);
 
-						// This `ChildrenIter` does not have at least one child: move on to the next
-						// one.
-						None => continue,
+								break;
+							},
+
+							// This `ChildrenIter` does not have at least one child: move on to the next
+							// one.
+							None => continue,
+						}
 					}
-				}
 
-				token
+					token
+				},
 			},
-		});
+		};
 
 		// If there is a next token, and that token refers to a branch, add that branch's
 		// `ChildrenIter` to the stack.
