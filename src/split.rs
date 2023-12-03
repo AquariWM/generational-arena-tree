@@ -13,6 +13,7 @@ use generational_arena::Index;
 
 use crate::{
 	iter,
+	remove_children_linked,
 	sealed::{Idx, Sealed},
 	token_to_node,
 	Arena,
@@ -238,8 +239,8 @@ where
 	#[inline(always)]
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::Branch(branch) => branch.fmt(f),
-			Self::Leaf(leaf) => leaf.fmt(f),
+			Self::Branch(branch) => write!(f, "BranchToken({:?})", branch.idx()),
+			Self::Leaf(leaf) => write!(f, "LeafToken({:?})", leaf.idx()),
 		}
 	}
 }
@@ -281,6 +282,7 @@ where
 	BranchData: Debug,
 	LeafData: Debug,
 {
+	#[inline(always)]
 	fn clone(&self) -> Self {
 		*self
 	}
@@ -321,7 +323,7 @@ where
 	LeafData: Debug,
 {
 	#[inline(always)]
-	fn idx(&self) -> Index {
+	fn idx(&self) -> generational_arena::Index {
 		match self {
 			Self::Branch(branch) => branch.idx(),
 			Self::Leaf(leaf) => leaf.idx(),
@@ -336,14 +338,15 @@ where
 {
 }
 
-impl<BranchData, LeafData> PartialEq for Branch<BranchData, LeafData>
+impl<BranchData, LeafData, Other: Node> PartialEq<Other> for Branch<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
+	<Self as Node>::Token: PartialEq<Other::Token>,
 {
 	#[inline(always)]
-	fn eq(&self, other: &Self) -> bool {
-		self.token == other.token
+	fn eq(&self, other: &Other) -> bool {
+		self.token == other.token()
 	}
 }
 
@@ -365,14 +368,15 @@ where
 	}
 }
 
-impl<BranchData, LeafData> PartialEq for Leaf<BranchData, LeafData>
+impl<BranchData, LeafData, Other: Node> PartialEq<Other> for Leaf<BranchData, LeafData>
 where
 	BranchData: Debug,
 	LeafData: Debug,
+	<Self as Node>::Token: PartialEq<Other::Token>,
 {
 	#[inline(always)]
-	fn eq(&self, other: &Self) -> bool {
-		self.token == other.token
+	fn eq(&self, other: &Other) -> bool {
+		self.token == other.token()
 	}
 }
 
@@ -504,7 +508,7 @@ where
 	LeafData: Debug,
 {
 	type Base = Self;
-	type Token = SplitToken<BranchData, LeafData> where Self: Sized;
+	type Token = SplitToken<BranchData, LeafData>;
 
 	type Data = SplitData<BranchData, LeafData>;
 	type DataRef<'data> = SplitData<&'data BranchData, &'data LeafData>
@@ -515,10 +519,7 @@ where
 		Self: 'data;
 
 	#[inline(always)]
-	fn new(arena: &mut Arena<Self::Base>, data: Self::Data) -> Self::Token
-	where
-		Self: Sized,
-	{
+	fn new(arena: &mut Arena<Self>, data: Self::Data) -> Self::Token {
 		match data {
 			SplitData::Branch(data) => SplitToken::Branch(Branch::new(arena, data)),
 			SplitData::Leaf(data) => SplitToken::Leaf(Leaf::new(arena, data)),
@@ -526,10 +527,7 @@ where
 	}
 
 	#[inline(always)]
-	fn token(&self) -> Self::Token
-	where
-		Self: Sized,
-	{
+	fn token(&self) -> Self::Token {
 		match self {
 			Self::Branch(branch) => SplitToken::Branch(branch.token()),
 			Self::Leaf(leaf) => SplitToken::Leaf(leaf.token()),
@@ -571,32 +569,12 @@ where
 	type Branch = Branch<BranchData, LeafData>;
 	type Leaf = Leaf<BranchData, LeafData>;
 
-	fn into_representation(self, arena: &mut Arena<Self::Base>) -> Self::Representation
-	where
-		Self: Sized,
-	{
+	fn into_representation(self, arena: &mut Arena<Self::Base>) -> Self::Representation {
 		match self {
 			// Branch.
-			Self::Branch(branch) => {
-				let mut children = VecDeque::new();
-				let mut child = branch.first_child;
-
-				while let Some(token) = &child {
-					children.push_back(
-						arena
-							.0
-							.remove(token.idx())
-							.expect("tried to remove child but there was no such node in the `arena`")
-							.into_representation(arena),
-					);
-
-					child = Some(*token);
-				}
-
-				SplitNodeRepresentation::Branch {
-					children,
-					data: branch.data,
-				}
+			Self::Branch(branch) => SplitNodeRepresentation::Branch {
+				children: remove_children_linked(&branch, arena),
+				data: branch.data,
 			},
 
 			// Leaf.
@@ -640,9 +618,7 @@ where
 	LeafData: Debug,
 {
 	type Base = SplitNode<BranchData, LeafData>;
-	type Token = Token<Self>
-	where
-		Self: Sized;
+	type Token = Token<Self>;
 
 	type Data = BranchData;
 	type DataRef<'data> = &'data BranchData
@@ -652,10 +628,7 @@ where
 	where
 		Self: 'data;
 
-	fn new(arena: &mut Arena<Self::Base>, data: Self::Data) -> Token<Self>
-	where
-		Self: Sized,
-	{
+	fn new(arena: &mut Arena<Self::Base>, data: Self::Data) -> Token<Self> {
 		Token::new(arena.0.insert_with(|idx| {
 			SplitNode::Branch(Self {
 				token: Token::new(idx),
@@ -684,12 +657,12 @@ where
 	}
 
 	#[inline(always)]
-	fn data(&self) -> Self::DataRef<'_> {
+	fn data(&self) -> &BranchData {
 		&self.data
 	}
 
 	#[inline(always)]
-	fn data_mut(&mut self) -> Self::DataRefMut<'_> {
+	fn data_mut(&mut self) -> &mut BranchData {
 		&mut self.data
 	}
 }
@@ -743,10 +716,7 @@ where
 		self.first_child.is_none()
 	}
 
-	fn detach_front(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as Node>::Token>
-	where
-		Self: Sized,
-	{
+	fn detach_front(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as Node>::Token> {
 		let this = token_to_node!(ref mut, Self: token, arena);
 
 		match (this.first_child, this.last_child) {
@@ -796,10 +766,7 @@ where
 		}
 	}
 
-	fn detach_back(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as Node>::Token>
-	where
-		Self: Sized,
-	{
+	fn detach_back(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as Node>::Token> {
 		let this = token_to_node!(ref mut, Self: token, arena);
 
 		match (this.first_child, this.last_child) {
@@ -849,10 +816,10 @@ where
 		}
 	}
 
-	fn pop_front(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as BaseNode>::Representation>
-	where
-		Self: Sized,
-	{
+	fn pop_front(
+		token: Self::Token,
+		arena: &mut Arena<Self::Base>,
+	) -> Option<<Self::Base as BaseNode>::Representation> {
 		let this = token_to_node!(ref mut, Self: token, arena);
 
 		match (this.first_child, this.last_child) {
@@ -898,10 +865,7 @@ where
 		}
 	}
 
-	fn pop_back(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as BaseNode>::Representation>
-	where
-		Self: Sized,
-	{
+	fn pop_back(token: Self::Token, arena: &mut Arena<Self::Base>) -> Option<<Self::Base as BaseNode>::Representation> {
 		let this = token_to_node!(ref mut, Self: token, arena);
 
 		match (this.first_child, this.last_child) {
@@ -947,10 +911,7 @@ where
 		}
 	}
 
-	fn push_front(token: Self::Token, arena: &mut Arena<Self::Base>, new: <Self::Base as Node>::Token)
-	where
-		Self: Sized,
-	{
+	fn push_front(token: Self::Token, arena: &mut Arena<Self::Base>, new: <Self::Base as Node>::Token) {
 		// We're not pushing our own root...
 		assert_ne!(
 			token_to_node!(ref, Self: token, arena).root(arena),
@@ -987,10 +948,7 @@ where
 		}
 	}
 
-	fn push_back(token: Self::Token, arena: &mut Arena<Self::Base>, new: <Self::Base as Node>::Token)
-	where
-		Self: Sized,
-	{
+	fn push_back(token: Self::Token, arena: &mut Arena<Self::Base>, new: <Self::Base as Node>::Token) {
 		// We're not pushing our own root...
 		assert_ne!(
 			token_to_node!(ref, Self: token, arena).root(arena),
@@ -1041,7 +999,7 @@ where
 	LeafData: Debug,
 {
 	type Base = SplitNode<BranchData, LeafData>;
-	type Token = Token<Self> where Self: Sized;
+	type Token = Token<Self>;
 
 	type Data = LeafData;
 	type DataRef<'data> = &'data LeafData
@@ -1051,10 +1009,7 @@ where
 	where
 		Self: 'data;
 
-	fn new(arena: &mut Arena<Self::Base>, data: Self::Data) -> Token<Self>
-	where
-		Self: Sized,
-	{
+	fn new(arena: &mut Arena<Self::Base>, data: Self::Data) -> Self::Token {
 		Token::new(arena.0.insert_with(|idx| {
 			SplitNode::Leaf(Self {
 				token: Token::new(idx),
@@ -1070,10 +1025,7 @@ where
 	}
 
 	#[inline(always)]
-	fn token(&self) -> Self::Token
-	where
-		Self: Sized,
-	{
+	fn token(&self) -> Self::Token {
 		self.token
 	}
 
@@ -1083,12 +1035,12 @@ where
 	}
 
 	#[inline(always)]
-	fn data(&self) -> Self::DataRef<'_> {
+	fn data(&self) -> &LeafData {
 		&self.data
 	}
 
 	#[inline(always)]
-	fn data_mut(&mut self) -> Self::DataRefMut<'_> {
+	fn data_mut(&mut self) -> &mut LeafData {
 		&mut self.data
 	}
 }

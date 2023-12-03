@@ -275,6 +275,7 @@ impl<Data: Debug> BranchNode for UnifiedNodeDeque<Data> {
 impl<Data: Debug> Index<usize> for UnifiedNodeDeque<Data> {
 	type Output = Token<Self>;
 
+	#[inline(always)]
 	fn index(&self, index: usize) -> &Self::Output {
 		&self.children[index]
 	}
@@ -315,7 +316,7 @@ impl<Data: Debug> BranchNodeDeque for UnifiedNodeDeque<Data> {
 			.into_representation(arena)
 	}
 
-	fn insert(token: Self::Token, arena: &mut Arena<Self::Base>, index: usize, new: Token<Self>) {
+	fn insert(token: Self::Token, arena: &mut Arena<Self>, index: usize, new: Token<Self>) {
 		// We're not inserting our own root...
 		assert_ne!(
 			arena.0[token.idx()].root(arena),

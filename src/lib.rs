@@ -76,7 +76,7 @@ pub struct Token<N: Node> {
 impl<N: Node> Debug for Token<N> {
 	#[inline(always)]
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-		self.idx.fmt(f)
+		write!(f, "Token({:?})", self.idx)
 	}
 }
 
@@ -1545,9 +1545,9 @@ where
 /// # Examples
 /// TODO
 #[derive(Debug, Default)]
-pub struct Arena<Node>(pub(crate) generational_arena::Arena<Node>);
+pub struct Arena<N: Node>(pub(crate) generational_arena::Arena<N>);
 
-impl<Node> Arena<Node> {
+impl<N: Node> Arena<N> {
 	/// Creates a new, empty arena.
 	pub fn new() -> Self {
 		Self(generational_arena::Arena::new())
