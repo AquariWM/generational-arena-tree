@@ -15,8 +15,11 @@ unified = []
 split = []
 deque = []
 
+serde = ["dep:serde", "generational-arena/serde"]
+
 [dependencies]
 generational-arena = "0.2.9"
 thiserror = "1.0.50"
+serde = { version = "1.0.193", optional = true, features = ["derive"] }
 
 cfg_attrs = "3"

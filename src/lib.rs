@@ -55,8 +55,6 @@ macro_rules! token_to_node {
 
 pub(crate) use token_to_node;
 
-pub type ArenaIndex = generational_arena::Index;
-
 use std::{
 	collections::VecDeque,
 	fmt::{Debug, Formatter},
@@ -67,10 +65,35 @@ use std::{
 };
 
 use cfg_attrs::cfg_attrs;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub struct Token<N: Node> {
 	idx: generational_arena::Index,
 	_marker: PhantomData<N>,
+}
+
+#[cfg(feature = "serde")]
+impl<N: Node> Serialize for Token<N> {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		self.idx.serialize(serializer)
+	}
+}
+
+#[cfg(feature = "serde")]
+impl<'a, N: Node> Deserialize<'a> for Token<N> {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: Deserializer<'a>,
+	{
+		Ok(Self {
+			idx: generational_arena::Index::deserialize(deserializer)?,
+			_marker: PhantomData,
+		})
+	}
 }
 
 impl<N: Node> Debug for Token<N> {
@@ -1559,5 +1582,27 @@ impl<N: Node> Arena<N> {
 	/// further memory for the arena itself.
 	pub fn with_capacity(capacity: usize) -> Self {
 		Self(generational_arena::Arena::with_capacity(capacity))
+	}
+}
+
+#[cfg(feature = "serde")]
+impl<N: Node + Serialize> Serialize for Arena<N> {
+	#[inline(always)]
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		self.0.serialize(serializer)
+	}
+}
+
+#[cfg(feature = "serde")]
+impl<'de, N: Node + Deserialize<'de>> Deserialize<'de> for Arena<N> {
+	#[inline(always)]
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: Deserializer<'de>,
+	{
+		Ok(Self(generational_arena::Arena::deserialize(deserializer)?))
 	}
 }

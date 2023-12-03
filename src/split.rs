@@ -9,7 +9,8 @@ use std::{
 };
 
 use cfg_attrs::cfg_attrs;
-use generational_arena::Index;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::{
 	iter,
@@ -74,6 +75,7 @@ type LeafToken<BranchData, LeafData> = Token<Leaf<BranchData, LeafData>>;
 /// [leaf]: Leaf
 /// [leaves]: Leaf
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum SplitNode<BranchData: Debug, LeafData: Debug> {
 	/// A [branch] node that may have children.
 	///
@@ -91,6 +93,7 @@ pub enum SplitNode<BranchData: Debug, LeafData: Debug> {
 /// [custom data]: Node::Data
 /// [split node]: SplitNode
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum SplitData<BranchData: Debug, LeafData: Debug> {
 	/// The [data] associated with a
 	#[configure(
@@ -127,6 +130,7 @@ pub enum SplitData<BranchData: Debug, LeafData: Debug> {
 /// [split node]: SplitNode
 /// [arena]: Arena
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum SplitNodeRepresentation<BranchData: Debug, LeafData: Debug> {
 	/// The [representation] of a [branch] node.
 	///
@@ -161,6 +165,7 @@ pub enum SplitNodeRepresentation<BranchData: Debug, LeafData: Debug> {
 ///
 /// [token]: NodeToken
 /// [split node]: SplitNode
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum SplitToken<BranchData: Debug, LeafData: Debug> {
 	/// A [branch] node's [token].
 	///
@@ -191,6 +196,7 @@ pub enum SplitToken<BranchData: Debug, LeafData: Debug> {
 /// [children]: Branch::children
 /// [split node]: SplitNode
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Branch<BranchData: Debug, LeafData: Debug> {
 	token: Token<Self>,
 
@@ -220,6 +226,7 @@ pub struct Branch<BranchData: Debug, LeafData: Debug> {
 /// [branches]: Branch
 /// [split node]: SplitNode
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Leaf<BranchData: Debug, LeafData: Debug> {
 	token: Token<Self>,
 
