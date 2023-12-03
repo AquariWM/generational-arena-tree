@@ -10,6 +10,8 @@ use std::{
 	ops::Index,
 };
 
+use cfg_attrs::cfg_attrs;
+
 use crate::{
 	remove_children_deque,
 	sealed::{Idx, Sealed},
@@ -22,6 +24,7 @@ use crate::{
 	Token,
 };
 
+#[cfg_attrs]
 /// A [node] that is _not_ split into separate [branch] and leaf [nodes].
 ///
 /// This is the [deque] version, where [children] are represented as a [`VecDeque`]. In this
@@ -29,14 +32,19 @@ use crate::{
 /// [next sibling][next][(s)][following] are not available, but the [node] can be
 /// [directly indexed], and children can be [detached], [removed], or [inserted] by index.
 ///
-/// [`Data`] represents the [custom data] associated with the node.
+/// `Data` represents the [custom data] associated with the node.
 ///
 /// # See also
 /// For the non-[deque] version, see [`UnifiedNode`].
-///
-/// For a [node] that _is_ split into separate [branch] and leaf [nodes], see [`SplitNode`] and
-/// [`SplitNodeDeque`].
-///
+#[configure(
+	feature = "split",
+	/// For a [node] that _is_ split into separate [branch] and leaf [nodes], see [`SplitNode`]
+	/// and [`SplitNodeDeque`].
+	///
+	/// [`SplitNode`]: crate::split::SplitNode
+	/// [`SplitNodeDeque`]: crate::split::SplitNodeDeque
+	///
+)]
 /// [node]: Node
 /// [nodes]: Node
 /// [branch]: BranchNode

@@ -34,36 +34,44 @@ pub use deque::*;
 type BranchToken<BranchData, LeafData> = Token<Branch<BranchData, LeafData>>;
 type LeafToken<BranchData, LeafData> = Token<Leaf<BranchData, LeafData>>;
 
-#[cfg_attrs {
-	/// A [node] that is split into separate [branch] and [leaf] nodes.
-	///
-	/// [`BranchData`] represents the [custom data](Branch::Data) associated with [branches], while
-	/// [`LeafData`] represents the [custom data](Leaf::Data) associated with [leaves].
-	///
+#[cfg_attrs]
+/// A [node] that is split into separate [branch] and [leaf] nodes.
+///
+/// `BranchData` represents the [custom data](Branch::Data) associated with [branches], while
+/// `LeafData` represents the [custom data](Leaf::Data) associated with [leaves].
+#[configure(
+	any(feature = "unified", feature = "deque"),
+	/// # See also
 	#[configure(
-		any(feature = "unified", feature = "deque"),
-		/// # See also
+		feature = "deque",
+		/// For the [deque] version, see [`SplitNodeDeque`].
+		///
+		/// [deque]: crate::BranchNodeDeque
+		///
+	)]
+	#[configure(
+		feature = "unified",
+		/// For a [node] that _isn't_ split into separate branch and leaf nodes, see
+		#[configure(
+			not(feature = "deque"),
+			/// [`UnifiedNode`].
+			///
+		)]
 		#[configure(
 			feature = "deque",
-			/// For the [deque] version, see [`SplitNodeDeque`].
+			/// [`UnifiedNode`] and [`UnifiedNodeDeque`].
 			///
-			/// [deque]: crate::BranchNodeDeque
-			///
+			/// [`UnifiedNodeDeque`]: crate::unified::UnifiedNodeDeque
 		)]
-		#[configure(
-			feature = "unified",
-			/// For a [node] that _isn't_ split into separate branch and leaf nodes, see [`UnifiedNode`].
-			///
-			/// [`UnifiedNode`]: crate::unified::UnifiedNode
-			///
-		)]
+		/// [`UnifiedNode`]: crate::unified::UnifiedNode
+		///
 	)]
-	/// [node]: Node
-	/// [branch]: Branch
-	/// [branches]: Branch
-	/// [leaf]: Leaf
-	/// [leaves]: Leaf
-}]
+)]
+/// [node]: Node
+/// [branch]: Branch
+/// [branches]: Branch
+/// [leaf]: Leaf
+/// [leaves]: Leaf
 #[derive(Debug)]
 pub enum SplitNode<BranchData: Debug, LeafData: Debug> {
 	/// A [branch] node that may have children.
@@ -76,19 +84,37 @@ pub enum SplitNode<BranchData: Debug, LeafData: Debug> {
 	Leaf(Leaf<BranchData, LeafData>),
 }
 
+#[cfg_attrs]
 /// The [custom data] associated with a [split node].
 ///
 /// [custom data]: Node::Data
 /// [split node]: SplitNode
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum SplitData<BranchData: Debug, LeafData: Debug> {
-	/// The [data] associated with a [branch] node.
-	///
+	/// The [data] associated with a
+	#[configure(
+		not(feature = "deque"),
+		/// [`Branch`].
+		///
+	)]
+	#[configure(
+		feature = "deque",
+		/// [`Branch`] or [`BranchDeque`].
+		///
+	)]
 	/// [data]: Branch::Data
-	/// [branch]: Branch
 	Branch(BranchData),
-	/// The [data] associated with a [leaf] node.
-	///
+	/// The [data] associated with a
+	#[configure(
+		not(feature = "deque"),
+		/// [`Leaf`].
+		///
+	)]
+	#[configure(
+		feaute = "deque",
+		/// [`Leaf`] or [`LeafDeque`].
+		///
+	)]
 	/// [data]: Leaf::Data
 	/// [leaf]: Leaf
 	Leaf(LeafData),
@@ -152,7 +178,7 @@ pub enum SplitToken<BranchData: Debug, LeafData: Debug> {
 /// [Branches] are [nodes] which may have [children], as opposed to [leaves], which may not have
 /// [children].
 ///
-/// [`BranchData`] represents the [custom data] associated with branch nodes.
+/// `BranchData` represents the [custom data] associated with branch nodes.
 ///
 /// [custom data]: Branch::Data
 ///
@@ -183,7 +209,7 @@ pub struct Branch<BranchData: Debug, LeafData: Debug> {
 /// Leaves are [nodes] which may not have [children], as opposed to [branches], which may have
 /// [children].
 ///
-/// [`LeafData`] represents the [custom data] associated with leaf nodes.
+/// `LeafData` represents the [custom data] associated with leaf nodes.
 ///
 /// [custom data]: Leaf::Data
 ///
