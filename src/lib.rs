@@ -29,6 +29,12 @@
 //! - `deque`
 //!   - Enables [nodes] which have [`VecDeque`] [children], rather than siblings forming a [linked]
 //!     list, allowing operations by index.
+//! - `serde`
+//!   - Enables implementations of [serde]'s [`Serialize`] and [`Deserialize`] traits.
+//!
+//! [serde]: https://serde.rs/
+//! [`Serialize`]: https://docs.rs/serde/1.0.193/serde/trait.Serialize.html
+//! [`Deserialize`]: https://docs.rs/serde/1.0.193/serde/trait.Deserialize.html
 //!
 //! [node]: Node
 //! [nodes]: Node
@@ -53,8 +59,6 @@ macro_rules! token_to_node {
 	};
 }
 
-pub(crate) use token_to_node;
-
 use std::{
 	collections::VecDeque,
 	fmt::{Debug, Formatter},
@@ -67,6 +71,7 @@ use std::{
 use cfg_attrs::cfg_attrs;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+pub(crate) use token_to_node;
 
 pub struct Token<N: Node> {
 	idx: generational_arena::Index,

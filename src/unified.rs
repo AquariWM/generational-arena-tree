@@ -9,6 +9,8 @@ use std::{
 };
 
 use cfg_attrs::cfg_attrs;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::{
 	iter,
@@ -24,28 +26,29 @@ use crate::{
 };
 
 #[cfg(feature = "deque")]
+#[doc(cfg(feature = "deque"))]
 mod deque;
 
 #[cfg(feature = "deque")]
-#[doc(cfg(feature = "deque"))]
 pub use deque::*;
 
 #[cfg_attrs]
 /// A [node] that is _not_ split into separate [branch] and leaf [nodes].
 #[configure(
 	feature = "deque",
-	/// This is the non-[deque] version, where [children] are represented as a linked list. In
+	/// This is the non-[deque] version, where [children] are represented as a [linked] list. In
 	/// this version, a [node]'s [previous sibling][prev][(s)][preceding] and
 	/// [next sibling][next][(s)][following] are available, but [nodes] cannot be
 	/// [directly indexed], nor can [children] be [detached], [removed], or [inserted] by index.
 	///
 	/// [deque]: crate::BranchNodeDeque
+	/// [linked]: crate::LinkedNode
 	/// [children]: UnifiedNode::children
 	///
-	/// [directly indexed]: UnifiedNodeDeque::index
-	/// [detached]: UnifiedNodeDeque::detach
-	/// [removed]: UnifiedNodeDeque::remove
-	/// [inserted]: UnifiedNodeDeque::insert
+	/// [directly indexed]: core::ops::Index
+	/// [detached]: crate::BranchNodeDeque::detach
+	/// [removed]: crate::BranchNodeDeque::remove
+	/// [inserted]: crate::BranchNodeDeque::insert
 	///
 	/// [prev]: UnifiedNode::prev
 	/// [preceding]: UnifiedNode::preceding_siblings
@@ -87,6 +90,7 @@ pub use deque::*;
 /// [branch]: BranchNode
 /// [custom data]: UnifiedNode::Data
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct UnifiedNode<Data: Debug> {
 	token: Token<Self>,
 
@@ -107,6 +111,7 @@ pub struct UnifiedNode<Data: Debug> {
 /// [unified node]: UnifiedNode
 /// [arena]: Arena
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct UnifiedNodeRepresentation<Data: Debug> {
 	/// The [node]'s [children].
 	///

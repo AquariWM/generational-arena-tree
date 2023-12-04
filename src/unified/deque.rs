@@ -12,10 +12,10 @@ use std::{
 
 use cfg_attrs::cfg_attrs;
 
+use super::*;
 use crate::{
 	remove_children_deque,
 	sealed::{Idx, Sealed},
-	unified::UnifiedNodeRepresentation,
 	Arena,
 	BaseNode,
 	BranchNode,
@@ -28,9 +28,9 @@ use crate::{
 /// A [node] that is _not_ split into separate [branch] and leaf [nodes].
 ///
 /// This is the [deque] version, where [children] are represented as a [`VecDeque`]. In this
-/// version, a node's [previous sibling][prev][(s)][preceding] and
-/// [next sibling][next][(s)][following] are not available, but the [node] can be
-/// [directly indexed], and children can be [detached], [removed], or [inserted] by index.
+/// version, a [node]'s [previous sibling][prev][(s)][preceding] and
+/// [next sibling][next][(s)][following] are not available, but [nodes] can be [directly indexed],
+/// and [children] can be [detached], [removed], or [inserted] by index.
 ///
 /// `Data` represents the [custom data] associated with the node.
 ///
@@ -62,6 +62,7 @@ use crate::{
 /// [next]: crate::LinkedNode::next
 /// [following]: crate::LinkedNode::following_siblings
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct UnifiedNodeDeque<Data: Debug> {
 	token: Token<Self>,
 
@@ -290,10 +291,12 @@ impl<Data: Debug> BranchNodeDeque for UnifiedNodeDeque<Data> {
 	fn detach(token: Self::Token, arena: &mut Arena<Self>, index: usize) -> Token<Self> {
 		let children = &mut arena.0[token.idx()].children;
 
-		let child = children.remove(index).expect(&format!(
-			"the given `index` ({index}) was out of bounds; there were only {} children",
-			children.len()
-		));
+		let child = children.remove(index).unwrap_or_else(|| {
+			panic!(
+				"the given `index` ({index}) was out of bounds; there were only {} children",
+				children.len()
+			)
+		});
 
 		// Detach the child's parent.
 		arena.0[child.idx()].parent = None;
@@ -304,10 +307,12 @@ impl<Data: Debug> BranchNodeDeque for UnifiedNodeDeque<Data> {
 	fn remove(token: Self::Token, arena: &mut Arena<Self>, index: usize) -> UnifiedNodeRepresentation<Data> {
 		let children = &mut arena.0[token.idx()].children;
 
-		let child = children.remove(index).expect(&format!(
-			"the given `index` ({index}) was out of bounds; there were only {} children",
-			children.len()
-		));
+		let child = children.remove(index).unwrap_or_else(|| {
+			panic!(
+				"the given `index` ({index}) was out of bounds; there were only {} children",
+				children.len()
+			)
+		});
 
 		arena
 			.0

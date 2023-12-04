@@ -10,6 +10,54 @@ use crate::{remove_children_deque, BranchNodeDeque};
 type BranchTokenDeque<BranchData, LeafData> = Token<BranchDeque<BranchData, LeafData>>;
 type LeafTokenDeque<BranchData, LeafData> = Token<LeafDeque<BranchData, LeafData>>;
 
+#[cfg_attrs]
+/// A [node] that is split into separate [branch] and [leaf] nodes.
+///
+/// This is the [deque] version, where [children] are represented as a [`VecDeque`]. In this
+/// version, a [node]'s [previous sibling][prev][(s)][preceding] and
+/// [next sibling][next][(s)][following] are not available, but [branches] can be
+/// [directly indexed], and [children] can be [detached], [removed], or [inserted] by index.
+///
+/// [node]: Node
+/// [branch]: BranchDeque
+/// [branches]: BranchDeque
+/// [leaf]: LeafDeque
+/// [leaves]: LeafDeque
+///
+/// [deque]: BranchNodeDeque
+/// [children]: BranchDeque::children
+///
+/// [prev]: LinkedNode::prev
+/// [preceding]: LinkedNode::preceding_siblings
+/// [next]: LinkedNode::next
+/// [following]: LinkedNode::following_siblings
+///
+/// [directly indexed]: Index
+/// [detached]: BranchDeque::detach
+/// [removed]: BranchDeque::remove
+/// [inserted]: BranchDeque::insert
+///
+/// `BranchData` represents the [custom data](BranchDeque::Data) associated with [branches], while
+/// `LeafData` represents the [custom data](LeafDeque::Data) associated with [leaves].
+///
+/// # See also
+/// For the non-[deque] version, see [`SplitNode`].
+#[configure(
+	feature = "unified",
+	/// For a [node] that _isn't_ split into separate branch and leaf nodes, see
+	#[configure(
+		not(feature = "deque"),
+		/// [`UnifiedNode`].
+		///
+	)]
+	#[configure(
+		feature = "deque",
+		/// [`UnifiedNode`] and [`UnifiedNodeDeque`].
+		///
+		/// [`UnifiedNodeDeque`]: crate::unified::UnifiedNodeDeque
+	)]
+	/// [`UnifiedNode`]: crate::unified::UnifiedNode
+)]
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum SplitNodeDeque<BranchData: Debug, LeafData: Debug> {
@@ -17,12 +65,40 @@ pub enum SplitNodeDeque<BranchData: Debug, LeafData: Debug> {
 	Leaf(LeafDeque<BranchData, LeafData>),
 }
 
+/// The [token] type referring to a [`SplitNodeDeque`].
+///
+/// [token]: NodeToken
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum SplitTokenDeque<BranchData: Debug, LeafData: Debug> {
+	/// A [branch] node's [token].
+	///
+	/// [branch]: BranchDeque
+	/// [token]: NodeToken
 	Branch(BranchTokenDeque<BranchData, LeafData>),
+	/// A [leaf] node's [token].
+	///
+	/// [leaf]: LeafDeque
+	/// [token]: NodeToken
 	Leaf(LeafTokenDeque<BranchData, LeafData>),
 }
 
+/// The [node] representing [branches] in a [split node] tree.
+///
+/// [Branches] are [nodes] which may have [children], as opposed to [leaves], which may not have
+/// [children].
+///
+/// `BranchData` represents the [custom data] associated with branch nodes.
+///
+/// [node]: Node
+/// [nodes]: Node
+///
+/// [branches]: BranchNodeDeque
+/// [Branches]: BranchNodeDeque
+///
+/// [leaves]: LeafDeque
+///
+/// [children]: BranchNode::children
+/// [split node]: SplitNodeDeque
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct BranchDeque<BranchData: Debug, LeafData: Debug> {
@@ -34,6 +110,22 @@ pub struct BranchDeque<BranchData: Debug, LeafData: Debug> {
 	data: BranchData,
 }
 
+/// The [node] representing leaves in a [split node] tree.
+///
+/// Leaves are [nodes] which may not have [children], as opposed to [branches], which may have
+/// [children].
+///
+/// `LeafData` represents the [custom data] associated with leaf nodes.
+///
+/// [custom data]: Leaf::Data
+///
+/// [node]: Node
+/// [nodes]: Node
+///
+/// [branches]: BranchDeque
+/// [children]: BranchDeque::children
+///
+/// [split node]: SplitNodeDeque
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct LeafDeque<BranchData: Debug, LeafData: Debug> {

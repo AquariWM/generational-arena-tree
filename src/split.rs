@@ -38,7 +38,28 @@ type LeafToken<BranchData, LeafData> = Token<Leaf<BranchData, LeafData>>;
 
 #[cfg_attrs]
 /// A [node] that is split into separate [branch] and [leaf] nodes.
-///
+#[configure(
+	feature = "deque",
+	/// This is the non-[deque] version, where [children] are represented as a [linked] list. In
+	/// this version, a [node]'s [previous sibling][prev][(s)][preceding] and
+	/// [next sibling][next][(s)][following] are available, but [branches] cannot be
+	/// [directly indexed], nor can [children] be [detached], [removed], or [inserted] by index.
+	///
+	/// [deque]: crate::BranchNodeDeque
+	/// [linked]: crate::LinkedNode
+	/// [children]: Branch::children
+	///
+	/// [directly indexed]: core::ops::Index
+	/// [detached]: crate::BranchNodeDeque::detach
+	/// [remove]: crate::BranchNodeDeque::remove
+	/// [inserted]: crate::BranchNodeDeque::insert
+	///
+	/// [prev]: SplitNode::prev
+	/// [preceding]: SplitNode::preceding_siblings
+	/// [next]: SplitNode::next
+	/// [following]: SplitNode::following_siblings
+	///
+)]
 /// `BranchData` represents the [custom data](Branch::Data) associated with [branches], while
 /// `LeafData` represents the [custom data](Leaf::Data) associated with [leaves].
 #[configure(
@@ -88,10 +109,18 @@ pub enum SplitNode<BranchData: Debug, LeafData: Debug> {
 }
 
 #[cfg_attrs]
-/// The [custom data] associated with a [split node].
-///
+/// The [custom data] associated with a
+#[configure(
+	not(feature = "deque"),
+	/// [`SplitNode`].
+	///
+)]
+#[configure(
+	feature = "deque",
+	/// [`SplitNode`] or [`SplitNodeDeque`].
+	///
+)]
 /// [custom data]: Node::Data
-/// [split node]: SplitNode
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum SplitData<BranchData: Debug, LeafData: Debug> {
@@ -124,47 +153,65 @@ pub enum SplitData<BranchData: Debug, LeafData: Debug> {
 	Leaf(LeafData),
 }
 
-/// The [representation] of a [split node] after it has been removed from the [arena].
+#[cfg_attrs]
+/// The [representation] of a [`SplitNode`]
+#[configure(
+	feature = "deque",
+	/// or [`SplitNodeDeque`]
+)]
+/// after it has been removed from the [arena].
 ///
 /// [representation]: BaseNode::Representation
-/// [split node]: SplitNode
 /// [arena]: Arena
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum SplitNodeRepresentation<BranchData: Debug, LeafData: Debug> {
-	/// The [representation] of a [branch] node.
-	///
-	/// [representation]: BaseNode::Representation
-	/// [branch]: Branch
-	Branch {
-		/// The [branch] node's [children].
+	/// The [representation] of a
+	#[configure(
+		not(feature = "deque"),
+		/// [`Branch`].
 		///
-		/// [branch]: Branch
+	)]
+	#[configure(
+		feature = "deque",
+		/// [`Branch`] or [`BranchDeque`].
+		///
+	)]
+	/// [representation]: BaseNode::Representation
+	Branch {
+		/// The branch node's [children].
+		///
 		/// [children]: Branch::children
 		children: VecDeque<SplitNodeRepresentation<BranchData, LeafData>>,
-		/// The [data] associated with the [branch] node.
+		/// The [data] associated with the branch node.
 		///
-		/// [branch]: Branch
 		/// [data]: Branch::Data
 		data: BranchData,
 	},
-	/// The [representation] of a [leaf] node.
-	///
-	/// [representation]: BaseNode::Representation
-	/// [leaf]: Leaf
-	Leaf {
-		/// The [data] associated with the [leaf] node.
+
+	/// The [representation] of a
+	#[configure(
+		not(feature = "deque"),
+		/// [`Leaf`].
 		///
-		/// [leaf]: Leaf
+	)]
+	#[configure(
+		feature = "deque",
+		/// [`Leaf`] or [`LeafDeque`].
+		///
+	)]
+	/// [representation]: BaseNode::Representation
+	Leaf {
+		/// The [data] associated with the leaf node.
+		///
 		/// [data]: Leaf::Data
 		data: LeafData,
 	},
 }
 
-/// The [token] type referring to a [split node].
+/// The [token] type referring to a [`SplitNode`].
 ///
 /// [token]: NodeToken
-/// [split node]: SplitNode
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub enum SplitToken<BranchData: Debug, LeafData: Debug> {
 	/// A [branch] node's [token].
